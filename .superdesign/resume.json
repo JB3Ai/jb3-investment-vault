@@ -1,0 +1,39 @@
+﻿{
+    "targets":  {
+                    "console":  {
+                                    "targetKind":  "existing-ui",
+                                    "contextFiles":  [
+                                                         ".superdesign/design-system.md",
+                                                         "src/components/ConsoleFrame.tsx",
+                                                         "src/components/AnalogKnob.tsx",
+                                                         "src/components/OLEDPanel.tsx",
+                                                         "src/components/SectionIndex.tsx",
+                                                         "src/content/registry.ts",
+                                                         "src/types.ts",
+                                                         "src/styles.css"
+                                                     ],
+                                    "projectId":  "f9567715-ed7e-42e2-8f84-ba0227ffa26b",
+                                    "drafts":  {
+                                                   "b879ddf2-e516-46f9-9921-bde6bbc4d01a":  {
+                                                                                                "title":  "JB³ Investment Vault - Asymmetrical Luxury Console",
+                                                                                                "currentVersion":  3,
+                                                                                                "visualDirection":  "User selected version 2 Asymmetrical Luxury Console; local desktop implementation uses stacked left dials and right OLED, incorporating version 3 visibility and demo-label corrections. Tablet/mobile retain responsive arrangement."
+                                                                                            }
+                                               },
+                                    "designSystemPath":  ".superdesign/design-system.md",
+                                    "activeDraftId":  "b879ddf2-e516-46f9-9921-bde6bbc4d01a",
+                                    "updatedAt":  "2026-10-14T04:57:47.4014594Z",
+                                    "fingerprints":  {
+                                                         "src/styles.css":  "5f329a250a935a26e17f3235d3ce21dd0dab65ee8b9f48de0d20eeabfc06ab30",
+                                                         "src/components/OLEDPanel.tsx":  "c9c955bb27d6561e67a85653ea5ac418a3101f0c3b49ec807dcc33197ba2a70a",
+                                                         "src/components/SectionIndex.tsx":  "ee0ab0804bd3020534b98c4c03f90220b8ce9814ebdd7627e4960a17a04e610c",
+                                                         ".superdesign/design-system.md":  "f255282310d18c0ae43eca59df51cdbf34ce7dc615504d087aa6aaf3e9975bda",
+                                                         "src/components/ConsoleFrame.tsx":  "1794beded4b93b08248129b502ab6d69df30bb644e9c8368f9cc4589fd25ff6e",
+                                                         "src/components/AnalogKnob.tsx":  "ea8c5195f443a5db401fe6995fc85f25aea2ee2f2f4a93c1f56438fd87aba2c4",
+                                                         "src/types.ts":  "93f6cb7c59ffcbdc7bae00165a631a00a6db1f464f7cab7915b8312424af15f0",
+                                                         "src/content/registry.ts":  "4a7ed98ab6769e155c23314e197e83ad62e1b34a373c0dc34dcf98625daa8c7b"
+                                                     }
+                                }
+                },
+    "schemaVersion":  1
+}

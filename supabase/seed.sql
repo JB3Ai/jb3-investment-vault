@@ -1,0 +1,1 @@
+-- Deliberately empty. Never seed confidential content or production accounts.
