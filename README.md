@@ -12,7 +12,6 @@ npm.cmd run dev
 ```
 
 Open http://127.0.0.1:5173. No environment file or credentials are needed for the demonstration.
-The existing empty file `j` is preserved.
 
 ## Available checks
 
@@ -28,7 +27,7 @@ Browser tests start local servers on ports 5173 (demonstration) and 5174 (unconf
 
 ## Included
 
-- Cinematic entry, CSS/SVG leather texture, machined controls and central OLED.
+- Approved Asymmetrical Luxury Console v2 with stacked desktop controls, a right-hand OLED and the preserved mobile layout.
 - Eleven sections, drag/touch/keyboard rotary selection, step controls and direct index.
 - Spacious section reader with provenance, verification, disclosure and update metadata.
 - Interactive 2024–2025 editorial timeline and laboratory evidence-gallery placeholders.
@@ -52,6 +51,8 @@ Do not place confidential content in these files, the Git repository, or `public
 
 The opportunity register is session-local. Forecast controls reset when leaving the section. The model excludes tax, financing costs, capital expenditure and collection timing. It does not calculate or promise investment returns.
 
+The [private content ingestion workflow](docs/PRIVATE_CONTENT_INGESTION.md) provides a local-only importer, eleven section manifests, provenance and approval validation, and separate `BRUCE_PRIVATE`, `COMMERCIAL` and `LEGAL_RESTRICTED` classifications. Source documents and staged batches must remain outside this repository. Prepared authenticated Supabase adapters and database policies are not connected to the approved demonstration interface; confidential release remains disabled pending live security testing.
+
 ## Security modes
 
 Default: `VITE_VAULT_MODE=demo`. This is publicly readable synthetic content.
@@ -65,7 +66,7 @@ No live Supabase project was changed or connected. Docker was not running, so fu
 
 ## Deployment and source control
 
-The project has a local Git repository on `main`, a lockfile, ignore rules and `.github/workflows/checks.yml`. No remote, commit or push was created.
+Source repository: [JB3Ai/jb3-investment-vault](https://github.com/JB3Ai/jb3-investment-vault), branch `main`. It includes a lockfile, ignore rules and `.github/workflows/checks.yml`. Publishing source code does not deploy the application or enable confidential access.
 `wrangler.jsonc` publishes only `dist/` as Worker static assets with SPA fallback; `public/_headers` supplies CSP and other response headers.
 The configuration was dry-run checked. Nothing was deployed, per the request to keep the build local.
 

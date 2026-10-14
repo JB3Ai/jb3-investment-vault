@@ -15,3 +15,7 @@ playwright-report/
 tmp/
 .superdesign/tmp/
 private-content/
+private-imports/
+sources/
+batches/
+*.private.json

@@ -6,6 +6,8 @@ Safe for local demonstration with synthetic content. **Not approved for confiden
 No hosted project, authentication account, document bucket or deployment has been altered.
 The UI animation is not an authentication mechanism.
 
+The new offline ingestion path is documented in [PRIVATE_CONTENT_INGESTION.md](docs/PRIVATE_CONTENT_INGESTION.md). Its prepared migration uses separate BRUCE_PRIVATE, COMMERCIAL and LEGAL_RESTRICTED grants, with no automatic hierarchy or mapping from legacy PRIVATE membership. Both the existing and new content release switches must be enabled for new records to be readable; both remain disabled. No live migration has been applied. The two-tier model below describes the existing application path, not permission to place new restricted records into legacy tables.
+
 ## Enforcement model
 
 - Supabase email/password Auth; no public registration interface. Local Supabase signup and anonymous sign-in are disabled.
