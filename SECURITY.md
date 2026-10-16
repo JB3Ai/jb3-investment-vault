@@ -3,10 +3,10 @@
 ## Current status
 
 Safe for local demonstration with synthetic content. **Not approved for confidential production material.**
-No hosted project, authentication account, document bucket or deployment has been altered.
+The owner reported installation of the reviewed Vault migrations on the shared Supabase project on 16 October 2026. The recorded versions are `20261016101851` (`vault_access`) and `20261016101857` (`private_content_ingestion`). Do not reapply the local files or repair shared migration history. The owner reports seven tables, two private buckets, nine policies, both gates false and no investor content uploaded; these hosted findings have not been independently refreshed in this session. Live acceptance remains **BLOCKED / NOT RUN** because privileged operator access is unavailable. See [LIVE_SECURITY_ACCEPTANCE.md](docs/LIVE_SECURITY_ACCEPTANCE.md).
 The UI animation is not an authentication mechanism.
 
-The new offline ingestion path is documented in [PRIVATE_CONTENT_INGESTION.md](docs/PRIVATE_CONTENT_INGESTION.md). Its prepared migration uses separate BRUCE_PRIVATE, COMMERCIAL and LEGAL_RESTRICTED grants, with no automatic hierarchy or mapping from legacy PRIVATE membership. Both the existing and new content release switches must be enabled for new records to be readable; both remain disabled. No live migration has been applied. The two-tier model below describes the existing application path, not permission to place new restricted records into legacy tables.
+The offline ingestion path is documented in [PRIVATE_CONTENT_INGESTION.md](docs/PRIVATE_CONTENT_INGESTION.md). Its migration uses separate BRUCE_PRIVATE, COMMERCIAL and LEGAL_RESTRICTED grants, with no automatic hierarchy or mapping from legacy PRIVATE membership. Both release switches must be enabled for new records to be readable; leave both false outside approved synthetic test windows. The two-tier model below describes the legacy application path, not permission to place new restricted records into legacy tables.
 
 ## Enforcement model
 
@@ -40,11 +40,11 @@ These are SQL policy tests, **not live Supabase service tests**. Docker was unav
 
 ## Before any confidential use
 
-1. Choose a dedicated Supabase project; review the migration and existing policies. Do not apply to an unrelated project.
-2. Apply `supabase/migrations/*_vault_access.sql` through the approved migration workflow. Existing permissive policies on Storage must not broaden this bucket's access.
-3. Keep signup/anonymous access disabled; configure password policy, email delivery, URL settings and short JWT lifetime. Consider MFA for the intended risk profile.
+1. Verify the owner-approved shared project and existing policies using the [compatibility assessment](docs/SHARED_SUPABASE_COMPATIBILITY.md). Preserve unrelated JB3 resources, Auth settings and migration history.
+2. Verify the two owner-reported applied migrations and all effective policies; do not reapply them. Existing permissive policies on Storage must not broaden Vault access.
+3. Inspect shared password authentication, JWT lifetime, providers, email delivery, URLs and triggers without changing them. Any shared-setting change requires separate impact review and approval. Vault membership/grant policies reject anonymous-auth content access independently of other applications' provider settings.
 4. Create separate synthetic PRIVATE, COMMERCIAL and unassigned test accounts. Add memberships only through a trusted owner operation.
-5. Load synthetic approved, unapproved, private and commercial sections and PDF fixtures only. Temporarily enable `vault_settings.access_enabled` for those synthetic integration tests.
+5. Load synthetic legacy metadata plus approved/draft records for all three exact classifications and synthetic PDF/image fixtures only. Test each release-gate combination in a bounded synthetic-only window and restore both gates false afterward.
 6. Verify password sign-in, sign-out, unauthenticated denial, unassigned denial, approval rules, direct REST access, direct Storage access, URL issuance and expiry, role revocation, and expired membership against the real services. Confirm the bucket is not public and inspect Supabase security advisors.
 7. Confirm production CSP, HTTPS, cache headers and the correct Cloudflare/Supabase account. Set the exact Supabase host in CSP if using a custom domain.
 8. Record the evidence, then obtain authorisation before loading confidential material or deploying. Leave the access switch false if verification is incomplete.

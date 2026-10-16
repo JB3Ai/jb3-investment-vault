@@ -1,0 +1,826 @@
+{
+  "format": "JB3_VAULT_MIGRATION_REVIEW_INVENTORY_V1",
+  "date": "2026-10-15",
+  "projectReference": "uxeolplwhtyyefpmwktw",
+  "evidence": "Exact migration SQL executed against embedded PostgreSQL with synthetic platform/shared-project fixtures; not hosted Supabase",
+  "recommendation": "PASS for closed-gate schema installation after explicit approval; not confidential-release acceptance",
+  "migrations": [
+    {
+      "filename": "20261013195840_vault_access.sql",
+      "sha256": "a5e8235c75b1e27d946b9b1a0445124fd0ab444b64f315488ff76303142d3425"
+    },
+    {
+      "filename": "20261014085915_private_content_ingestion.sql",
+      "sha256": "87167e891c24f70ebde0c1f753ec728e18240ec626dd50f0b8219e0554419943"
+    }
+  ],
+  "tables": [
+    {
+      "name": "vault_content_grants",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_content_records",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_content_settings",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_documents",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_memberships",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_sections",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "name": "vault_settings",
+      "rls_enabled": true,
+      "force_rls": false,
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres,service_role=arwdDxtm/postgres}"
+    }
+  ],
+  "policies": [
+    {
+      "schemaname": "public",
+      "tablename": "vault_content_grants",
+      "policyname": "Read own exact content grants",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND active AND ((expires_at IS NULL) OR (expires_at > now())) AND (NOT COALESCE(((( SELECT auth.jwt() AS jwt) ->> 'is_anonymous'::text))::boolean, false)))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_content_records",
+      "policyname": "Read explicitly granted approved content",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((approval = 'approved'::text) AND (verification <> 'awaiting-verification'::text) AND (EXISTS ( SELECT 1\n   FROM vault_settings\n  WHERE ((vault_settings.id = 1) AND vault_settings.access_enabled))) AND (EXISTS ( SELECT 1\n   FROM vault_content_settings\n  WHERE ((vault_content_settings.id = 1) AND vault_content_settings.access_enabled))) AND (EXISTS ( SELECT 1\n   FROM vault_content_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND (g.classification = vault_content_records.classification)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_content_settings",
+      "policyname": "Read content release state",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_documents",
+      "policyname": "Read authorised documents",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((EXISTS ( SELECT 1\n   FROM vault_settings\n  WHERE ((vault_settings.id = 1) AND vault_settings.access_enabled))) AND (EXISTS ( SELECT 1\n   FROM vault_sections s\n  WHERE (s.id = vault_documents.section_id))) AND (EXISTS ( SELECT 1\n   FROM vault_memberships m\n  WHERE ((m.user_id = ( SELECT auth.uid() AS uid)) AND ((m.access_level = 'PRIVATE'::text) OR ((vault_documents.disclosure = 'COMMERCIAL'::text) AND vault_documents.approved))))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_memberships",
+      "policyname": "Read own current membership",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND active AND ((expires_at IS NULL) OR (expires_at > now())) AND (NOT COALESCE(((( SELECT auth.jwt() AS jwt) ->> 'is_anonymous'::text))::boolean, false)))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_sections",
+      "policyname": "Read authorised sections",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((EXISTS ( SELECT 1\n   FROM vault_settings\n  WHERE ((vault_settings.id = 1) AND vault_settings.access_enabled))) AND (EXISTS ( SELECT 1\n   FROM vault_memberships m\n  WHERE ((m.user_id = ( SELECT auth.uid() AS uid)) AND ((m.access_level = 'PRIVATE'::text) OR ((vault_sections.disclosure = 'COMMERCIAL'::text) AND vault_sections.approved))))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "vault_settings",
+      "policyname": "Read release state",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Read approved private evidence objects",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'vault-evidence'::text) AND (EXISTS ( SELECT 1\n   FROM vault_content_records r\n  WHERE ((r.storage_path = objects.name) AND (r.kind = ANY (ARRAY['pdf'::text, 'photograph'::text]))))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Read authorised vault objects",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'vault-documents'::text) AND (EXISTS ( SELECT 1\n   FROM vault_documents d\n  WHERE (d.storage_path = objects.name))))",
+      "with_check": null
+    }
+  ],
+  "indexes": [
+    {
+      "tablename": "vault_content_grants",
+      "indexname": "vault_content_grants_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_content_grants_pkey ON public.vault_content_grants USING btree (user_id, classification)"
+    },
+    {
+      "tablename": "vault_content_records",
+      "indexname": "vault_content_class_section",
+      "indexdef": "CREATE INDEX vault_content_class_section ON public.vault_content_records USING btree (classification, section_id)"
+    },
+    {
+      "tablename": "vault_content_records",
+      "indexname": "vault_content_records_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_content_records_pkey ON public.vault_content_records USING btree (id)"
+    },
+    {
+      "tablename": "vault_content_records",
+      "indexname": "vault_content_records_storage_path_key",
+      "indexdef": "CREATE UNIQUE INDEX vault_content_records_storage_path_key ON public.vault_content_records USING btree (storage_path)"
+    },
+    {
+      "tablename": "vault_content_settings",
+      "indexname": "vault_content_settings_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_content_settings_pkey ON public.vault_content_settings USING btree (id)"
+    },
+    {
+      "tablename": "vault_documents",
+      "indexname": "vault_documents_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_documents_pkey ON public.vault_documents USING btree (id)"
+    },
+    {
+      "tablename": "vault_documents",
+      "indexname": "vault_documents_section_idx",
+      "indexdef": "CREATE INDEX vault_documents_section_idx ON public.vault_documents USING btree (section_id)"
+    },
+    {
+      "tablename": "vault_documents",
+      "indexname": "vault_documents_storage_path_key",
+      "indexdef": "CREATE UNIQUE INDEX vault_documents_storage_path_key ON public.vault_documents USING btree (storage_path)"
+    },
+    {
+      "tablename": "vault_memberships",
+      "indexname": "vault_memberships_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_memberships_pkey ON public.vault_memberships USING btree (user_id)"
+    },
+    {
+      "tablename": "vault_sections",
+      "indexname": "vault_sections_number_key",
+      "indexdef": "CREATE UNIQUE INDEX vault_sections_number_key ON public.vault_sections USING btree (number)"
+    },
+    {
+      "tablename": "vault_sections",
+      "indexname": "vault_sections_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_sections_pkey ON public.vault_sections USING btree (id)"
+    },
+    {
+      "tablename": "vault_settings",
+      "indexname": "vault_settings_pkey",
+      "indexdef": "CREATE UNIQUE INDEX vault_settings_pkey ON public.vault_settings USING btree (id)"
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_classification_check",
+      "type": "c",
+      "definition": "CHECK ((classification = ANY (ARRAY['BRUCE_PRIVATE'::text, 'COMMERCIAL'::text, 'LEGAL_RESTRICTED'::text])))"
+    },
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_classification_not_null",
+      "type": "n",
+      "definition": "NOT NULL classification"
+    },
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (user_id, classification)"
+    },
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "vault_content_grants",
+      "name": "vault_content_grants_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL user_id"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_approval_check",
+      "type": "c",
+      "definition": "CHECK ((approval = ANY (ARRAY['draft'::text, 'approved'::text, 'rejected'::text])))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_approval_not_null",
+      "type": "n",
+      "definition": "NOT NULL approval"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_check",
+      "type": "c",
+      "definition": "CHECK (((approval <> 'approved'::text) OR ((verification <> 'awaiting-verification'::text) AND (length(COALESCE((provenance ->> 'reviewedBy'::text), ''::text)) > 0) AND (length(COALESCE((provenance ->> 'reviewedOn'::text), ''::text)) > 0))))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_check1",
+      "type": "c",
+      "definition": "CHECK (((verification <> 'disputed'::text) OR (length(COALESCE((provenance ->> 'conflictNote'::text), ''::text)) > 0)))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_check2",
+      "type": "c",
+      "definition": "CHECK (((kind <> 'financial'::text) OR ((payload ->> 'basis'::text) <> 'actual'::text) OR ((verification = 'documented'::text) AND ((provenance ->> 'conflictNote'::text) IS NULL) AND (length(COALESCE((payload ->> 'reconciliationNote'::text), ''::text)) > 0))))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_check3",
+      "type": "c",
+      "definition": "CHECK ((((kind = ANY (ARRAY['photograph'::text, 'pdf'::text])) AND (sha256 IS NOT NULL) AND (storage_path = ((((classification || '/'::text) || (id)::text) || '/'::text) || sha256)) AND (mime_type = ANY (ARRAY['application/pdf'::text, 'image/jpeg'::text, 'image/png'::text, 'image/webp'::text]))) OR ((kind <> ALL (ARRAY['photograph'::text, 'pdf'::text])) AND (storage_path IS NULL) AND (sha256 IS NULL) AND (mime_type IS NULL))))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_classification_check",
+      "type": "c",
+      "definition": "CHECK ((classification = ANY (ARRAY['BRUCE_PRIVATE'::text, 'COMMERCIAL'::text, 'LEGAL_RESTRICTED'::text])))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_classification_not_null",
+      "type": "n",
+      "definition": "NOT NULL classification"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_kind_check",
+      "type": "c",
+      "definition": "CHECK ((kind = ANY (ARRAY['narrative'::text, 'photograph'::text, 'pdf'::text, 'opportunity'::text, 'financial'::text])))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_kind_not_null",
+      "type": "n",
+      "definition": "NOT NULL kind"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_payload_check",
+      "type": "c",
+      "definition": "CHECK ((jsonb_typeof(payload) = 'object'::text))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_payload_not_null",
+      "type": "n",
+      "definition": "NOT NULL payload"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_provenance_check",
+      "type": "c",
+      "definition": "CHECK ((jsonb_typeof(provenance) = 'object'::text))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_provenance_check1",
+      "type": "c",
+      "definition": "CHECK ((provenance ?& ARRAY['originalFilename'::text, 'sourceDate'::text, 'citation'::text, 'sourceReference'::text, 'reviewedBy'::text, 'reviewedOn'::text, 'conflictNote'::text]))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_provenance_not_null",
+      "type": "n",
+      "definition": "NOT NULL provenance"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_section_id_check",
+      "type": "c",
+      "definition": "CHECK ((section_id = ANY (ARRAY['introduction'::text, 'current-position'::text, 'history-evidence'::text, 'assets-claims'::text, 'financial-requirements'::text, 'beobacht-alignment'::text, 'commercial-pipeline'::text, 'southern-african-strategy'::text, 'financial-forecast'::text, 'investment-structures'::text, 'closing'::text])))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_section_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL section_id"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_sha256_check",
+      "type": "c",
+      "definition": "CHECK ((sha256 ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_storage_path_key",
+      "type": "u",
+      "definition": "UNIQUE (storage_path)"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_verification_check",
+      "type": "c",
+      "definition": "CHECK ((verification = ANY (ARRAY['documented'::text, 'reported'::text, 'disputed'::text, 'awaiting-verification'::text])))"
+    },
+    {
+      "table_name": "vault_content_records",
+      "name": "vault_content_records_verification_not_null",
+      "type": "n",
+      "definition": "NOT NULL verification"
+    },
+    {
+      "table_name": "vault_content_settings",
+      "name": "vault_content_settings_access_enabled_not_null",
+      "type": "n",
+      "definition": "NOT NULL access_enabled"
+    },
+    {
+      "table_name": "vault_content_settings",
+      "name": "vault_content_settings_id_check",
+      "type": "c",
+      "definition": "CHECK ((id = 1))"
+    },
+    {
+      "table_name": "vault_content_settings",
+      "name": "vault_content_settings_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "vault_content_settings",
+      "name": "vault_content_settings_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_approved_not_null",
+      "type": "n",
+      "definition": "NOT NULL approved"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_disclosure_check",
+      "type": "c",
+      "definition": "CHECK ((disclosure = ANY (ARRAY['PRIVATE'::text, 'COMMERCIAL'::text])))"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_disclosure_not_null",
+      "type": "n",
+      "definition": "NOT NULL disclosure"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_section_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (section_id) REFERENCES vault_sections(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_section_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL section_id"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_storage_path_check",
+      "type": "c",
+      "definition": "CHECK ((storage_path !~ '(^/|\\\\.\\\\.)'::text))"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_storage_path_key",
+      "type": "u",
+      "definition": "UNIQUE (storage_path)"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_storage_path_not_null",
+      "type": "n",
+      "definition": "NOT NULL storage_path"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_title_not_null",
+      "type": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_verification_check",
+      "type": "c",
+      "definition": "CHECK ((verification = ANY (ARRAY['DEMONSTRATION'::text, 'PENDING'::text, 'VERIFIED'::text])))"
+    },
+    {
+      "table_name": "vault_documents",
+      "name": "vault_documents_verification_not_null",
+      "type": "n",
+      "definition": "NOT NULL verification"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_access_level_check",
+      "type": "c",
+      "definition": "CHECK ((access_level = ANY (ARRAY['PRIVATE'::text, 'COMMERCIAL'::text])))"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_access_level_not_null",
+      "type": "n",
+      "definition": "NOT NULL access_level"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (user_id)"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "vault_memberships",
+      "name": "vault_memberships_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL user_id"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_approved_not_null",
+      "type": "n",
+      "definition": "NOT NULL approved"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_disclosure_check",
+      "type": "c",
+      "definition": "CHECK ((disclosure = ANY (ARRAY['PRIVATE'::text, 'COMMERCIAL'::text])))"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_disclosure_not_null",
+      "type": "n",
+      "definition": "NOT NULL disclosure"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_evidence_check",
+      "type": "c",
+      "definition": "CHECK ((jsonb_typeof(evidence) = 'array'::text))"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_evidence_not_null",
+      "type": "n",
+      "definition": "NOT NULL evidence"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_narrative_check",
+      "type": "c",
+      "definition": "CHECK ((jsonb_typeof(narrative) = 'array'::text))"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_narrative_not_null",
+      "type": "n",
+      "definition": "NOT NULL narrative"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_number_check",
+      "type": "c",
+      "definition": "CHECK (((number >= 1) AND (number <= 11)))"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_number_key",
+      "type": "u",
+      "definition": "UNIQUE (number)"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_number_not_null",
+      "type": "n",
+      "definition": "NOT NULL number"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_overview_not_null",
+      "type": "n",
+      "definition": "NOT NULL overview"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_subtitle_not_null",
+      "type": "n",
+      "definition": "NOT NULL subtitle"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_title_not_null",
+      "type": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_verification_check",
+      "type": "c",
+      "definition": "CHECK ((verification = ANY (ARRAY['DEMONSTRATION'::text, 'PENDING'::text, 'VERIFIED'::text])))"
+    },
+    {
+      "table_name": "vault_sections",
+      "name": "vault_sections_verification_not_null",
+      "type": "n",
+      "definition": "NOT NULL verification"
+    },
+    {
+      "table_name": "vault_settings",
+      "name": "vault_settings_access_enabled_not_null",
+      "type": "n",
+      "definition": "NOT NULL access_enabled"
+    },
+    {
+      "table_name": "vault_settings",
+      "name": "vault_settings_id_check",
+      "type": "c",
+      "definition": "CHECK ((id = 1))"
+    },
+    {
+      "table_name": "vault_settings",
+      "name": "vault_settings_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "vault_settings",
+      "name": "vault_settings_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "defaults": [
+    {
+      "table_name": "vault_content_grants",
+      "column_name": "active",
+      "column_default": "true"
+    },
+    {
+      "table_name": "vault_content_records",
+      "column_name": "approval",
+      "column_default": "'draft'::text"
+    },
+    {
+      "table_name": "vault_content_records",
+      "column_name": "created_at",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "vault_content_settings",
+      "column_name": "access_enabled",
+      "column_default": "false"
+    },
+    {
+      "table_name": "vault_documents",
+      "column_name": "id",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "vault_documents",
+      "column_name": "disclosure",
+      "column_default": "'PRIVATE'::text"
+    },
+    {
+      "table_name": "vault_documents",
+      "column_name": "verification",
+      "column_default": "'PENDING'::text"
+    },
+    {
+      "table_name": "vault_documents",
+      "column_name": "approved",
+      "column_default": "false"
+    },
+    {
+      "table_name": "vault_documents",
+      "column_name": "updated_at",
+      "column_default": "CURRENT_DATE"
+    },
+    {
+      "table_name": "vault_memberships",
+      "column_name": "active",
+      "column_default": "true"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "narrative",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "evidence",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "updated_at",
+      "column_default": "CURRENT_DATE"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "verification",
+      "column_default": "'PENDING'::text"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "disclosure",
+      "column_default": "'PRIVATE'::text"
+    },
+    {
+      "table_name": "vault_sections",
+      "column_name": "approved",
+      "column_default": "false"
+    },
+    {
+      "table_name": "vault_settings",
+      "column_name": "access_enabled",
+      "column_default": "false"
+    }
+  ],
+  "buckets": [
+    {
+      "id": "vault-documents",
+      "name": "vault-documents",
+      "public": false,
+      "file_size_limit": 26214400,
+      "allowed_mime_types": [
+        "application/pdf"
+      ]
+    },
+    {
+      "id": "vault-evidence",
+      "name": "vault-evidence",
+      "public": false,
+      "file_size_limit": 26214400,
+      "allowed_mime_types": [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "name": "vault_content_settings",
+      "access_enabled": false
+    },
+    {
+      "name": "vault_settings",
+      "access_enabled": false
+    }
+  ],
+  "sharedRegression": {
+    "syntheticHistoryRowsPreserved": 12,
+    "syntheticBucketScopedPoliciesPreserved": 7,
+    "syntheticProfilesAndApplicationRowsPreserved": true,
+    "syntheticOtherBucketMetadataAndReadAccessPreserved": true,
+    "authUserRowsCreated": 0,
+    "vaultClientStorageInsertsDenied": true
+  },
+  "notes": [
+    "Settings policies expose only release flags to authenticated callers, including anonymous-auth identities; protected memberships/grants/content reject anonymous-auth access.",
+    "Legacy PRIVATE membership can read legacy drafts when its gate is open. New classified content requires both gates, approval and exact grant.",
+    "Supplied live inspection confirms existing policies restricted to other buckets; those exact hosted definitions were not fetched in this review."
+  ],
+  "embeddedServerVersion": "18.6",
+  "constraintCatalogNote": "38 CHECK/PK/FK/UNIQUE constraints plus 38 NOT NULL requirements. This embedded server lists NOT NULL in pg_constraint; older PostgreSQL catalogs may represent it only in column metadata."
+}

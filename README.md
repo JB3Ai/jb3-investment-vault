@@ -23,7 +23,7 @@ npm.cmd run test:e2e
 npm.cmd run deploy:check
 ```
 
-Browser tests start local servers on ports 5173 (demonstration) and 5174 (unconfigured secure mode). The PDF engine is lazy loaded; its larger bundle is downloaded only when opening a document.
+Browser tests start local servers on ports 5173 (demonstration), 5174 (unconfigured secure mode) and 5175 (synthetic authenticated-reader fixtures). They do not connect to the hosted project. The PDF engine is lazy loaded; its larger bundle is downloaded only when opening a document.
 
 ## Included
 
@@ -47,22 +47,22 @@ Browser tests start local servers on ports 5173 (demonstration) and 5174 (unconf
 `src/lib/finance.ts` holds the transparent hypothetical model and default assumptions.
 Types are in `src/types.ts`; presentation components live in `src/components/`.
 
-Do not place confidential content in these files, the Git repository, or `public/`. Everything shipped in a client bundle is public. No supplied asset valuations, contracts, certifications, founder history, photographs or financial actuals were available; those remain explicitly pending.
+Do not place confidential content in these files, the Git repository, or `public/`. Everything shipped in a client bundle is public. Real source documents and approved narratives remain in external private custody. Financial and supporting-evidence approvals remain separate from narrative approval.
 
 The opportunity register is session-local. Forecast controls reset when leaving the section. The model excludes tax, financing costs, capital expenditure and collection timing. It does not calculate or promise investment returns.
 
-The [private content ingestion workflow](docs/PRIVATE_CONTENT_INGESTION.md) provides a local-only importer, eleven section manifests, provenance and approval validation, and separate `BRUCE_PRIVATE`, `COMMERCIAL` and `LEGAL_RESTRICTED` classifications. Source documents and staged batches must remain outside this repository. Prepared authenticated Supabase adapters and database policies are not connected to the approved demonstration interface; confidential release remains disabled pending live security testing.
+The [private content ingestion workflow](docs/PRIVATE_CONTENT_INGESTION.md) provides a local-only importer, canonical master/PDF contracts, provenance and approval validation, and separate `BRUCE_PRIVATE`, `COMMERCIAL` and `LEGAL_RESTRICTED` classifications. Source documents and staged batches must remain outside this repository. The secure reader requests approved narratives through authentication, exact grants and both release gates; demonstration mode retains its synthetic registry. Confidential release remains disabled pending live security testing.
 
 ## Security modes
 
 Default: `VITE_VAULT_MODE=demo`. This is publicly readable synthetic content.
 
 Optional: `VITE_VAULT_MODE=secure`, with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-Copy `.env.example` to `.env.local` before configuring a dedicated approved environment. A publishable key is not a secret; never substitute a service-role key. Sessions are held in memory rather than localStorage.
+Copy `.env.example` to `.env.local` before configuring the owner-approved Supabase environment. Both `.env` and `.env.local` are ignored by Git. A publishable key is not a secret; never substitute a service-role or secret key. Sessions are held in memory rather than localStorage.
 
-Secure mode never falls back to demo access if configuration, authentication or membership checks fail. Content is fetched from Postgres only after authentication. The SQL release switch begins **disabled**. See [SECURITY.md](SECURITY.md) before enabling it.
+Secure mode never falls back to demo access if configuration, authentication or membership checks fail. Content is fetched from Postgres only after authentication. Both SQL release switches begin **disabled**. See [SECURITY.md](SECURITY.md) before enabling either.
 
-No live Supabase project was changed or connected. Docker was not running, so full local Supabase Auth/Storage could not be exercised. Embedded PostgreSQL policy tests use minimal local Auth/Storage schema fixtures and do not prove live JWT validation, email delivery, signed-link expiry or hosted configuration.
+On 16 October 2026, the owner reported installation of both reviewed migrations on the approved shared project. Their recorded versions are `20261016101851` and `20261016101857`; do not reapply the local files or repair shared migration history. The owner reports both gates false and no investor content uploaded. This session has not independently verified those hosted findings. Live acceptance is blocked by missing operator access; see [LIVE_SECURITY_ACCEPTANCE.md](docs/LIVE_SECURITY_ACCEPTANCE.md). Embedded PostgreSQL and mocked browser tests do not prove live JWT validation, email delivery, Storage expiry or hosted configuration.
 
 ## Deployment and source control
 

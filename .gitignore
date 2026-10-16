@@ -19,3 +19,9 @@ private-imports/
 sources/
 batches/
 *.private.json
+approved-master.json
+presentation.json
+investor-presentation.pdf
+master/
+financials/
+master-intake.json

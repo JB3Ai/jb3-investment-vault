@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { blankManifest, parseManifest, type ContentManifest } from './ingestion-schema.ts'
+import { parseMaster, parseMasterIntake, canonicalPresentation, masterPrintHtml } from './master-content.ts'
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const inside = (parent: string, candidate: string) => { const rel = path.relative(parent, candidate); return rel === '' || !rel.startsWith('..') && !path.isAbsolute(rel) }
@@ -27,7 +28,11 @@ export async function validateLocal(rootInput: string, manifestName: string) {
   const root = await privateRoot(rootInput)
   const filename = await privateFile(root, manifestName)
   if ((await stat(filename)).size > 10 * 1024 * 1024) throw new Error('Manifest exceeds 10 MiB')
-  const manifest = parseManifest(JSON.parse((await readFile(filename, 'utf8')).replace(/^\uFEFF/, '')))
+  const source = await readFile(filename)
+  const parsed = JSON.parse(source.toString('utf8').replace(/^\uFEFF/, ''))
+  const master = parsed?.format === 'JB3_APPROVED_MASTER_V1' ? parseMaster(parsed) : null
+  const intake = parsed?.format === 'JB3_MASTER_INTAKE_V1' ? parseMasterIntake(parsed) : null
+  const manifest = master?.content ?? intake?.content ?? parseManifest(parsed)
   const files = new Map<string, Buffer>()
   let total = 0
   for (const section of manifest.sections) for (const record of section.records) {
@@ -41,7 +46,7 @@ export async function validateLocal(rootInput: string, manifestName: string) {
     if (!signature(bytes, record.file.mimeType)) throw new Error('Source signature does not match declared media type')
     files.set(record.id.toLowerCase(), bytes)
   }
-  return { root, manifest, files }
+  return { root, manifest, files, master, intake, sourceSha256: createHash('sha256').update(source).digest('hex') }
 }
 export function stageRows(manifest: ContentManifest) {
   parseManifest(manifest)
@@ -53,7 +58,8 @@ export function stageRows(manifest: ContentManifest) {
   })))
 }
 export async function stageLocal(rootInput: string, manifestName: string) {
-  const { root, manifest, files } = await validateLocal(rootInput, manifestName)
+  const { root, manifest, files, master, intake, sourceSha256 } = await validateLocal(rootInput, manifestName)
+  if (intake) throw new Error('Review-only master intake cannot be staged or exported; final owner approval required')
   // Fixed output location; no --output escape hatch or public export mode.
   await mkdir(path.join(root, 'batches'), { recursive: true })
   const batches = await realpath(path.join(root, 'batches'))
@@ -66,8 +72,21 @@ export async function stageLocal(rootInput: string, manifestName: string) {
     await mkdir(path.dirname(target), { recursive: true })
     await writeFile(target, files.get(row.id)!, { flag: 'wx', mode: 0o600 })
   }
+  if (master) {
+    // These derivatives stay in private custody. No renderer rewrites narrative strings.
+    await writeFile(path.join(output, 'approved-master.json'), JSON.stringify(master, null, 2), { flag: 'wx', mode: 0o600 })
+    await writeFile(path.join(output, 'presentation.json'), JSON.stringify(canonicalPresentation(master), null, 2), { flag: 'wx', mode: 0o600 })
+    const { chromium } = await import('@playwright/test')
+    const browser = await chromium.launch()
+    try {
+      const page = await browser.newPage({ javaScriptEnabled: false })
+      await page.route('**/*', route => route.abort())
+      await page.setContent(masterPrintHtml(master))
+      await page.pdf({ path: path.join(output, 'investor-presentation.pdf'), format: 'A4', printBackground: true })
+    } finally { await browser.close() }
+  }
   // Write metadata last. Failed batches have no completion manifest and must not be loaded.
-  await writeFile(path.join(output, 'batch.json'), JSON.stringify({ format: 'JB3_PRIVATE_CONTENT_V1', releaseEnabled: false, table: 'vault_content_records', bucket: 'vault-evidence', rows }, null, 2), { flag: 'wx', mode: 0o600 })
+  await writeFile(path.join(output, 'batch.json'), JSON.stringify({ format: 'JB3_PRIVATE_CONTENT_V1', releaseEnabled: false, sourceSha256, hasMasterPresentation: master !== null, table: 'vault_content_records', bucket: 'vault-evidence', rows }, null, 2), { flag: 'wx', mode: 0o600 })
   return { batchId: path.basename(output), approvedCount: rows.length, withheldCount: manifest.sections.reduce((n, s) => n + s.records.length, 0) - rows.length }
 }
 async function cli() {

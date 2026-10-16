@@ -1,6 +1,12 @@
 # Private content ingestion — local preparation
 
-The approved console and mobile UI remain unchanged. The importer, manifests and new Supabase adapters are not connected to the rendered demo. No real source has been ingested or uploaded. No live migration has been applied. Both release gates remain false.
+For the single approved eleven-section master, optional laboratory showcase and separate dual-currency schedules, follow [Approved master intake](APPROVED_MASTER_INTEGRATION.md). The original record-manifest workflow below remains supported.
+
+For independent narrative wording review and the prepared secure reader, follow [Narrative approval workflow](NARRATIVE_APPROVAL_WORKFLOW.md). No private record is automatically approved; the complete master export and confidential release remain gated.
+
+For a master awaiting owner decisions, use the external `master-intake.json` envelope (`JB3_MASTER_INTAKE_V1`). It retains the section/interlude/schedule references and permits draft records and explicitly missing FX review metadata. `validate` checks it; `stage` rejects it before creating any output. The external `manifest.json` remains the record-level intake. Keep the envelope and manifest synchronized during reviewed edits. A complete approved-master presentation cannot be exported until every included record and its FX metadata passes the strict approved schema. Draft financial periods may be null; approved rows still require complete dates and amounts. Never convert blank spreadsheet inputs to zero obligations.
+
+The approved console and mobile UI remain unchanged. Real sources are reviewed only in external private custody; populated records and review reports never belong in this document or repository. Demonstration mode stays synthetic; the secure reader uses the private narrative adapter. On 16 October 2026 the owner reported the two reviewed migrations applied as `20261016101851` and `20261016101857`, both release gates false and no investor content uploaded. These hosted findings have not been independently refreshed in this session. Do not reapply migrations or repair shared history. Live acceptance remains blocked by missing operator access; see [LIVE_SECURITY_ACCEPTANCE.md](LIVE_SECURITY_ACCEPTANCE.md).
 
 ## Exact source location
 
@@ -51,14 +57,14 @@ These policies follow the official [Supabase RLS guidance](https://supabase.com/
 
 `src/lib/privateContent.ts` exposes `loadApprovedSection(client, sectionId)` and `downloadApprovedAsset(client, recordId)`. Both verify the user and release gates first. The latter re-queries accessible metadata and uses authenticated Storage download; callers cannot supply arbitrary storage paths. Returned records retain classification, verification and provenance. No frontend service key, persistent content cache, signed-link shortcut or demo fallback is introduced. The adapter does not flatten disputes into VERIFIED narratives.
 
-The adapters are intentionally not wired into the UI until the new schema has passed live acceptance. They do not implement a source uploader. An authorised owner must later apply/review the migration, scan and upload the exact batch objects to the private bucket, insert corresponding metadata transactionally and verify hashes. Batch JSON omits local filesystem paths; original filenames remain private database fields. Do not load new classified content into the older two-tier tables.
+The narrative-only adapter is prepared in the secure SectionReader path and remains behind authentication, exact grants and both release gates. Asset adapters are not connected to that reader. The adapters do not implement a source uploader. An authorised owner must later apply/review the migration, scan and upload approved batch objects to the private bucket, insert corresponding metadata transactionally and verify hashes. Batch JSON omits local filesystem paths; original filenames remain private database fields. Do not load new classified content into the older two-tier tables.
 
 Before confidential use:
 
-- Select the dedicated Supabase project; review/apply migrations and run database/security advisors.
+- Verify the owner-approved shared Supabase project, the reported applied migration versions and existing policies/advisors. Preserve other JB3 applications and migration history; do not reapply the reviewed SQL or push local Auth configuration to the shared project.
 - Use synthetic fixtures to test real sign-in/sign-out, unassigned/anonymous denial, all three grants, draft rejection, direct REST/Storage denial, expiry and revocation. Keep release false outside the controlled synthetic test window.
 - Confirm bucket privacy, project policies, source review, Windows/private-backup permissions and any redaction requirements.
-- Integrate the adapters into existing components without changing their approved presentation; clear loaded records/blob URLs on sign-out. Downloaded/copied bytes cannot be revoked.
+- Verify the prepared narrative reader live before confidential use; connect separately approved asset adapters later and clear records/blob URLs on sign-out. Downloaded/copied bytes cannot be revoked.
 - Record live acceptance and obtain explicit confidential-release approval. No tooling in this change activates release.
 
 ## Public-build safeguards and scope

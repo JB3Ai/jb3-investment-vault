@@ -78,7 +78,7 @@ export function parseManifest(value: unknown): ContentManifest {
         check(payload.stage !== 'Signed' || r.verification === 'documented', `${where}: signed stage needs documented evidence`)
       }
       if (r.kind === 'financial') {
-        check(text(payload.label) && member(payload.kind, ['actual-income', 'operating-cost', 'opening-cash', 'funding-need', 'forecast-revenue', 'repayment']) && member(payload.basis, ['actual', 'reported', 'assumption']) && date(payload.periodStart) && date(payload.periodEnd) && String(payload.periodStart) <= String(payload.periodEnd) && text(payload.reconciliationNote, true), `${where}: invalid financial metadata`)
+        check(text(payload.label) && member(payload.kind, ['actual-income', 'operating-cost', 'opening-cash', 'funding-need', 'forecast-revenue', 'repayment']) && member(payload.basis, ['actual', 'reported', 'assumption']) && date(payload.periodStart, r.approval !== 'approved') && date(payload.periodEnd, r.approval !== 'approved') && (payload.periodStart === null || payload.periodEnd === null || String(payload.periodStart) <= String(payload.periodEnd)) && text(payload.reconciliationNote, true), `${where}: invalid financial metadata`)
         check(payload.kind !== 'actual-income' || payload.basis === 'actual', `${where}: income cannot be promoted from a forecast`)
         check(payload.kind !== 'forecast-revenue' || payload.basis === 'assumption', `${where}: forecasts must remain assumptions`)
         check(payload.basis !== 'actual' || r.verification === 'documented' && p.conflictNote === null && text(payload.reconciliationNote), `${where}: actuals need documented reconciliation without unresolved conflict`)
@@ -86,7 +86,7 @@ export function parseManifest(value: unknown): ContentManifest {
       }
       if (r.kind === 'pdf' || r.kind === 'photograph') {
         const file = object(r.file, ['relativePath', 'sha256', 'mimeType'], where)
-        check(typeof file.relativePath === 'string' && /^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_. -]+)+$/.test(file.relativePath) && !file.relativePath.split('/').includes('..') && typeof file.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(file.sha256), `${where}: safe relative file and SHA-256 required`)
+        check(typeof file.relativePath === 'string' && /^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_. ()-]+)+$/.test(file.relativePath) && !file.relativePath.split('/').includes('..') && typeof file.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(file.sha256), `${where}: safe relative file and SHA-256 required`)
         check(r.kind === 'pdf' ? file.mimeType === 'application/pdf' : member(file.mimeType, ['image/jpeg', 'image/png', 'image/webp']), `${where}: unsupported media type`)
       } else check(r.file === null, `${where}: only photographs and PDFs attach binary files`)
     }
