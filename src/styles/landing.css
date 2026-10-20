@@ -29,14 +29,24 @@
 .vault-landing .landing-initialisation h1{font:400 clamp(30px,4vw,52px)/1.3 Georgia,serif;color:var(--landing-champagne)}
 .vault-landing .landing-initialisation p{font:10px var(--mono);letter-spacing:2px;color:#aaa091;margin:28px 0}
 .vault-landing .landing-progress{width:130px;height:1px;background:#e8d5c466;transform-origin:left;animation:landing-progress var(--init-duration) ease-out both}
-.vault-landing .landing-boot{pointer-events:none;animation:landing-power var(--boot-duration) ease-out both}
+.vault-landing .landing-boot{pointer-events:none;animation:landing-console-on .4s ease-out both}
 .vault-landing .landing-boot .console-heading,.vault-landing .landing-boot .console-engraving,.vault-landing .landing-boot .section-index,.vault-landing .landing-boot .oled-open,.vault-landing .landing-boot .oled-status{visibility:hidden}
-.vault-landing .landing-boot .knob-face{animation:landing-dial var(--boot-duration) ease-out both}
-.vault-landing .landing-boot .oled-content{animation:landing-power var(--boot-duration) ease-out both}
+.vault-landing .landing-boot .knob-group{--calibration-delay:var(--dial-delay);--idle-pointer:#b4a17b;--idle-glow:0 0 4px #0008}
+.vault-landing .landing-boot .knob-group.is-active{--idle-pointer:#ffc16d;--idle-glow:0 0 6px #ffaa3e99}
+.vault-landing .landing-boot .knob-group:nth-child(3){--calibration-delay:calc(var(--dial-delay) + var(--dial-stagger))}
+.vault-landing .landing-boot .knob-face{will-change:transform;animation:landing-calibration var(--dial-duration) cubic-bezier(.45,0,.55,1) var(--calibration-delay) both}
+.vault-landing .landing-boot .knob-pointer span{animation:landing-indicator var(--dial-duration) ease-in-out var(--calibration-delay) both}
+.vault-landing .landing-boot .oled-content{animation:landing-oled-start var(--oled-ready) linear both}
+.vault-landing .landing-boot .signal-line{animation:landing-signal var(--oled-ready) ease-in-out both}
 @keyframes landing-reveal{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes landing-button{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 @keyframes landing-power{0%{opacity:0;filter:brightness(.2)}40%{opacity:.6;filter:brightness(.4)}100%{opacity:1;filter:brightness(1)}}
-@keyframes landing-dial{from{transform:rotate(-35deg)}to{transform:rotate(0)}}
+@keyframes landing-console-on{from{opacity:0;filter:brightness(.8)}to{opacity:1;filter:brightness(1)}}
+/* 3000 ms rise, 500 ms hold, 3000 ms return, within the 6500 ms sweep. */
+@keyframes landing-calibration{0%{transform:rotate(0deg)}46.153846%,53.846154%{transform:rotate(var(--dial-peak))}100%{transform:rotate(0deg)}}
+@keyframes landing-indicator{0%,100%{background:var(--idle-pointer);box-shadow:var(--idle-glow)}46.153846%,53.846154%{background:#e4b465;box-shadow:0 0 7px #dba45480}}
+@keyframes landing-oled-start{0%{opacity:.04;filter:brightness(.2)}46%{opacity:.18;filter:brightness(.35)}58%{opacity:.3;filter:brightness(.5)}100%{opacity:1;filter:brightness(1)}}
+@keyframes landing-signal{0%{opacity:.15}46%,58%{opacity:.45}100%{opacity:1}}
 @keyframes landing-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:768px){.vault-landing .landing-main{padding:100px 32px 120px}.vault-landing .landing-copy{gap:30px}.vault-landing .landing-identity{left:32px;top:32px}.vault-landing .landing-controls{right:20px;top:16px}.vault-landing .landing-text{font-size:29px}.vault-landing .landing-text--secondary{font-size:20px}.vault-landing .landing-enter{padding:16px 32px}.vault-landing .landing-title{letter-spacing:4px}}
 @media(max-width:480px){.vault-landing .landing-main{padding:112px 24px 115px}.vault-landing .landing-copy{gap:24px}.vault-landing .landing-identity{top:29px;left:24px;max-width:120px;font-size:7px;line-height:1.7;letter-spacing:1px}.vault-landing .landing-identity span+span{display:none}.vault-landing .landing-controls{top:16px;right:14px;gap:5px}.vault-landing .landing-skip{font-size:8px;letter-spacing:1px;padding:8px}.vault-landing .landing-title{font-size:9px;letter-spacing:3px;margin-bottom:25px}.vault-landing .landing-text{font-size:25px;line-height:1.4}.vault-landing .landing-text--secondary{font-size:18px}.vault-landing .landing-disclaimer{font-size:13px;margin-top:28px}.vault-landing .landing-enter{font-size:9px;letter-spacing:3px;padding:16px 28px}.vault-landing .landing-button-wrapper{padding-top:8px}.vault-landing .landing-footer{bottom:24px;gap:14px}.vault-landing .landing-footer>span{height:28px}}

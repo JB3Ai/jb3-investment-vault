@@ -1,19 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { audioSessionKey, landingSessionKey, landingTiming, rememberFlag, sessionFlag } from './landingState'
+import { audioSessionKey, bootCalibration, calibrationDuration, calibrationReturn, landingSessionKey, landingTiming, rememberFlag, sessionFlag } from './landingState'
 afterEach(() => vi.unstubAllGlobals())
 describe('intro timing and optional presentation state', () => {
   it('uses the supplied device-specific reveal and boot timing', () => {
     expect(landingTiming(1440).reveals).toEqual([.5, 1.2, 1.9, 2.6])
-    expect(landingTiming(768).init).toBe(1500)
+    expect(landingTiming(768).init).toBe(3000)
     expect(landingTiming(375).skipPowerup).toBe(0)
   })
-  it('keeps the total authored sequence within six to eight seconds', () => {
+  it('keeps the triggered boot sequence within ten to twelve seconds', () => {
     for (const width of [375, 768, 1440]) {
       const timing = landingTiming(width)
-      const total = timing.landing + (timing.init + timing.powerup) / 1000
-      expect(total).toBeGreaterThanOrEqual(6)
-      expect(total).toBeLessThanOrEqual(8)
+      const total = (timing.init + timing.powerup) / 1000
+      expect(total).toBeGreaterThanOrEqual(10)
+      expect(total).toBeLessThanOrEqual(12)
     }
+  })
+  it('allows both three-second sweeps, the peak hold, stagger and a final settled frame', () => {
+    expect(bootCalibration.travelDegrees * bootCalibration.peakFraction).toBe(216)
+    expect(calibrationDuration).toBe(6500)
+    expect(calibrationReturn).toBe(7100)
+    expect(landingTiming(1440).powerup - calibrationReturn).toBe(700)
   })
   it('removes automatic animation delays for reduced motion', () => {
     const timing = landingTiming(1440, true)

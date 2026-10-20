@@ -5,7 +5,7 @@ import { ConsoleFrame } from './ConsoleFrame'
 import { LeatherBackground } from './LeatherBackground'
 import { demoSections } from '../content/registry'
 import { audioManager, type AudioCue } from '../lib/audioManager'
-import { landingSessionKey, landingTiming, rememberFlag, sessionFlag } from '../lib/landingState'
+import { bootCalibration, calibrationDuration, calibrationReturn, landingSessionKey, landingTiming, rememberFlag, sessionFlag } from '../lib/landingState'
 import '../styles/landing.css'
 
 const LocalPresentationPin=import.meta.env.DEV&&import.meta.env.MODE==='private-local'?lazy(()=>import('./PresentationPin').then(module=>({default:module.PresentationPin}))):null
@@ -50,12 +50,18 @@ export function EntryExperience({ children, mode }: { children: (replay: () => v
       if (!ready || version !== phaseVersion.current || document.hidden) return
       if (phase === 'powerup') {
         void audioManager.playSound('power-hum', 0, -28, timing.powerup / 1000)
-        void audioManager.playSound('confirmation-chime', timing.powerup / 1000 - .55, -24)
+        const rise = bootCalibration.start / 1000
+        const peak = (bootCalibration.start + bootCalibration.rise) / 1000
+        const returning = (bootCalibration.start + bootCalibration.rise + bootCalibration.hold) / 1000
+        void audioManager.playSound('whir-engage', rise, -32, (bootCalibration.rise + bootCalibration.stagger) / 1000)
+        void audioManager.playSound('mechanism-click', peak, -30)
+        void audioManager.playSound('mechanism-click', peak + bootCalibration.stagger / 1000, -33)
+        void audioManager.playSound('whir-engage', returning, -35, (bootCalibration.fall + bootCalibration.stagger) / 1000)
+        void audioManager.playSound('confirmation-chime', calibrationReturn / 1000, -28)
       } else {
         void audioManager.playSound('ambient-pad', 0, -27, timing.init / 1000)
         void audioManager.playSound('mechanism-click', 0, -20)
         void audioManager.playSound('shutter-whoosh', .08, -25)
-        void audioManager.playSound('whir-engage', .5, -26)
       }
     })
     const timer = window.setTimeout(() => {
@@ -110,7 +116,7 @@ export function EntryExperience({ children, mode }: { children: (replay: () => v
   }
   const replay = () => { setPinRequest(null); audioManager.stopAll(); setRevision(value => value + 1); setPhase('landing'); window.scrollTo({ top: 0, behavior: 'instant' }) }
   if (phase === 'ready') return children(replay)
-  const variables = { '--t-block-1': `${timing.reveals[0]}s`, '--t-block-2': `${timing.reveals[1]}s`, '--t-block-3': `${timing.reveals[2]}s`, '--t-button': `${timing.reveals[3]}s`, '--dur-reveal': `${timing.reveal}s`, '--init-duration': `${timing.init / 1000}s`, '--boot-duration': `${timing.powerup / 1000}s` } as CSSProperties
+  const variables = { '--t-block-1': `${timing.reveals[0]}s`, '--t-block-2': `${timing.reveals[1]}s`, '--t-block-3': `${timing.reveals[2]}s`, '--t-button': `${timing.reveals[3]}s`, '--dur-reveal': `${timing.reveal}s`, '--init-duration': `${timing.init / 1000}s`, '--boot-duration': `${timing.powerup / 1000}s`, '--dial-duration': `${calibrationDuration}ms`, '--dial-delay': `${bootCalibration.start}ms`, '--dial-stagger': `${bootCalibration.stagger}ms`, '--dial-peak': `${bootCalibration.travelDegrees * bootCalibration.peakFraction}deg`, '--oled-ready': `${calibrationReturn}ms` } as CSSProperties
   return <><div key={revision} inert={pinRequest?true:undefined} className={`vault-landing vault-landing--${phase}`} style={variables} onPointerDownCapture={unlockAudio} onKeyDownCapture={event => { if (['Enter', ' '].includes(event.key)) unlockAudio() }}><a className="skip-link" href="#main-content">Skip to content</a>
     {phase === 'landing' ? <VaultEntry mode={mode} muted={muted} onMute={toggleMute} onEnter={() => requestEntry(false)} onSkip={() => requestEntry(true)} /> : <><div className="landing-controls"><button className="landing-sound" onClick={toggleMute} aria-label={muted ? 'Unmute audio' : 'Mute audio'} aria-pressed={muted}>{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}</button><button className="landing-skip" onClick={finishIntro}>Skip intro</button></div><p className="sr-only" role="status">{phase === 'init' ? 'Preparing the Vault presentation.' : 'Preparing the console. Access permissions will be checked separately.'}</p>{phase === 'init' ? <main id="main-content" className="landing-initialisation"><span className="landing-title">JB³ PRIVATE INVESTMENT VAULT</span><h1>One considered conversation.</h1><p>Preparing the presentation</p><span className="landing-progress" aria-hidden="true" /></main> : <div className="landing-boot" aria-hidden="true" inert><LeatherBackground><div className="app-shell"><ConsoleFrame sections={bootSections} selected={bootSections[0]} onSelect={() => {}} onOpen={() => {}} /></div></LeatherBackground></div>}</>}
   </div>{pinRequest&&LocalPresentationPin&&<Suspense fallback={<p role="status">Preparing PIN entry...</p>}><LocalPresentationPin onBack={closePin} onInteract={()=>{audioReady.current=audioManager.init()}} onSuccess={()=>{const skip=pinRequest.skip;setPinRequest(null);enter(skip)}}/></Suspense>}</>
