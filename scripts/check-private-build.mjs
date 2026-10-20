@@ -28,7 +28,7 @@ async function scan(directory) {
     if(thumbnailHashes.has(createHash('sha256').update(bytes).digest('hex')))leaks++
     if (/\.(xlsx?|pdf|jpe?g|zip|docx?)$/i.test(entry.name)) leaks++
     if ([...tokens, ...secrets].some(token => bytes.includes(Buffer.from(token)) || bytes.includes(Buffer.from(JSON.stringify(token).slice(1, -1))))) leaks++
-    if (/JB3_(PRIVATE_CONTENT|APPROVED_MASTER|MASTER_INTAKE|SUPPORTING_EVIDENCE_REVIEW|FUNDING_PROPOSAL|ASSET_REVIEW|COMMERCIAL_REVIEW)_V1|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|JB3_LOCAL_PRESENTATION_PIN|presentation-pin|local-review\/financial-export|artifact-tool/.test(bytes.toString('utf8'))) leaks++
+    if (/JB3_(PRIVATE_CONTENT|APPROVED_MASTER|MASTER_INTAKE|SUPPORTING_EVIDENCE_REVIEW|FUNDING_PROPOSAL|ASSET_REVIEW|COMMERCIAL_REVIEW)_V1|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|JB3_LOCAL_PRESENTATION_PIN|local-review\/presentation-pin|local-review\/financial-export|artifact-tool/.test(bytes.toString('utf8'))) leaks++
   }
 }
 await scan('dist'); await scan('public')

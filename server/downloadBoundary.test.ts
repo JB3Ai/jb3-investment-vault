@@ -27,6 +27,7 @@ describe('protected download export boundary', () => {
     expect(config.preview_urls).toBe(false)
     expect(config.cache).toEqual({ enabled: false, cross_version_cache: false })
     expect(config.routes).toBeUndefined()
-    expect(config.vars).toBeUndefined()
+    expect(Object.keys(config.vars ?? {})).toEqual(config.vars ? ['VAULT_PRESENTATION_RELEASE'] : [])
+    if(config.vars)expect(config.vars.VAULT_PRESENTATION_RELEASE).toMatch(/^presentation-[a-z0-9-]+$/)
   })
 })

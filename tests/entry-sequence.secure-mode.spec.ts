@@ -1,0 +1,91 @@
+import { test, expect } from '@playwright/test'
+
+// All network observations are synthetic; no investor identity or content is used.
+for (const [device, width, height] of [['desktop', 1440, 960], ['mobile', 390, 844]] as const) {
+  test.describe(device + ' secure invitation', () => {
+    test.use({ viewport: { width, height } })
+    test('landing, PIN, full calibration, then console, with no pre-auth protected reads', async ({ page }, info) => {
+      let protectedReads = 0
+      page.on('request', request => {
+        if (/\/rest\/v1\/|\/api\/vault\/(assets|documents)\//.test(request.url())) protectedReads++
+      })
+      await page.addInitScript(() => sessionStorage.setItem('vaultLandingShown', 'true'))
+      await page.goto('/')
+      await expect(page.locator('#landing-title')).toBeVisible()
+      await expect(page.getByText('This private investment presentation has been prepared exclusively for Bruce Blackburn.', { exact: true })).toBeVisible()
+      await expect(page.getByLabel('Email address')).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath('landing.png'), fullPage: true, animations: 'disabled' })
+      await page.getByRole('button', { name: 'Enter vault', exact: true }).click()
+      await expect(page.getByRole('dialog', { name: 'Enter your PIN' })).toBeVisible()
+      await expect(page.getByLabel('Presentation PIN')).toBeFocused()
+      await page.getByLabel('Presentation PIN').fill('0000')
+      await page.getByRole('button', { name: 'Enter', exact: true }).click()
+      await expect(page.getByRole('status')).toHaveText('That PIN was not accepted. Try again.')
+      await expect(page.getByLabel('Email address')).toHaveCount(0)
+      await expect(page.locator('.landing-boot')).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath('pin.png'), fullPage: true })
+      await page.getByLabel('Presentation PIN').fill('2323')
+      const start = Date.now()
+      await page.getByRole('button', { name: 'Enter', exact: true }).click()
+      await expect(page.locator('.vault-landing--init')).toBeVisible()
+      await expect(page.getByLabel('Email address')).toHaveCount(0)
+      await page.locator('.landing-boot').waitFor()
+      await page.waitForTimeout(3700)
+      await expect(page.locator('.landing-boot')).toHaveAttribute('inert', '')
+      await expect(page.locator('.landing-boot .knob-face')).toHaveCount(2)
+      await page.screenshot({ path: info.outputPath('calibration.png'), fullPage: true })
+      await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
+      const duration = (Date.now() - start) / 1000
+      expect(duration).toBeGreaterThanOrEqual(10)
+      // Authored 10.8-second timing is covered independently; contention can delay browser timers.
+      expect(duration).toBeLessThan(60)
+      info.annotations.push({ type: 'calibration duration', description: duration.toFixed(2) + 's' })
+      await expect(page.getByRole('navigation', { name: 'Section index' })).toBeVisible()
+      expect(protectedReads).toBe(0)
+      await expect(page.getByRole('button', { name: 'Documents', exact: true })).toBeVisible()
+      await expect(page.locator('.narrative')).toHaveCount(0)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await expect(page.locator('input[type="email"], input[type="password"]')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath('access-pending.png'), fullPage: true })
+    })
+
+    test('Skip still requires PIN, Escape restores focus, reduced motion and reload stay closed', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      let localPinCalls = 0
+      page.on('request', request => { if (request.url().includes('/local-review/')) localPinCalls++ })
+      await page.goto('/')
+      await page.getByRole('button', { name: 'Skip intro', exact: true }).click()
+      await page.getByLabel('Presentation PIN').press('Escape')
+      await expect(page.getByRole('button', { name: 'Skip intro', exact: true })).toBeFocused()
+      await page.getByRole('button', { name: 'Enter vault', exact: true }).click()
+      await page.getByRole('button', { name: 'Digit 2', exact: true }).click()
+      await page.getByRole('button', { name: 'Digit 3', exact: true }).click()
+      await page.getByRole('button', { name: 'Digit 2', exact: true }).click()
+      await page.getByRole('button', { name: 'Digit 3', exact: true }).click()
+      await page.getByRole('button', { name: 'Enter', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
+      await expect(page.locator('.landing-boot')).toHaveCount(0)
+      await page.reload()
+      await expect(page.locator('#landing-title')).toBeVisible()
+      await page.getByRole('button', { name: 'Skip intro', exact: true }).click()
+      await page.getByLabel('Presentation PIN').fill('2323')
+      await page.getByRole('button', { name: 'Enter', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
+      expect(localPinCalls).toBe(0)
+    })
+
+    test('Skip cancels an active calibration without residual boot callbacks', async ({ page }) => {
+      await page.goto('/')
+      await page.getByRole('button', { name: 'Enter vault', exact: true }).click()
+      await page.getByLabel('Presentation PIN').fill('2323')
+      await page.getByRole('button', { name: 'Enter', exact: true }).click()
+      await page.locator('.landing-boot').waitFor()
+      await page.getByRole('button', { name: 'Skip intro', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
+      await page.waitForTimeout(800)
+      await expect(page.locator('.landing-boot')).toHaveCount(0)
+      await expect(page.getByRole('navigation', { name: 'Section index' })).toBeVisible()
+    })
+  })
+}

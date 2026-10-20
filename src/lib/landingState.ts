@@ -1,6 +1,13 @@
 export const landingSessionKey = 'vaultLandingShown'
 export const audioSessionKey = 'vaultAudioMuted'
 
+// Public presentation cue only. This value never authenticates or authorises an account.
+export function matchesPresentationPin(value: unknown): boolean { return value === '2323' }
+export function initialEntryPhase(mode: 'secure' | 'local' | 'demo' | 'presentation'): 'landing' | 'ready' {
+  // Old intro flags must not hide the invitation experience on hosted visits.
+  return (mode === 'local' || mode === 'demo') && sessionFlag(landingSessionKey) ? 'ready' : 'landing'
+}
+
 export function sessionFlag(key: string): boolean {
   try { return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key) === 'true' } catch { return false }
 }

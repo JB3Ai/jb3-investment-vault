@@ -1,7 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { audioSessionKey, bootCalibration, calibrationDuration, calibrationReturn, landingSessionKey, landingTiming, rememberFlag, sessionFlag } from './landingState'
+import { audioSessionKey, bootCalibration, calibrationDuration, calibrationReturn, landingSessionKey, landingTiming, rememberFlag, sessionFlag, initialEntryPhase, matchesPresentationPin } from './landingState'
 afterEach(() => vi.unstubAllGlobals())
 describe('intro timing and optional presentation state', () => {
+  it('requires the secure landing even when a previous intro flag is set', () => {
+    vi.stubGlobal('sessionStorage', { getItem: () => 'true' })
+    expect(initialEntryPhase('secure')).toBe('landing')
+    expect(initialEntryPhase('presentation')).toBe('landing')
+    expect(initialEntryPhase('local')).toBe('ready')
+    expect(initialEntryPhase('demo')).toBe('ready')
+  })
+  it('accepts the owner presentation cue without returning access credentials', () => {
+    expect(matchesPresentationPin('2323')).toBe(true)
+    for (const value of [2323, null, '1234', ' 2323', '2323 ', '232', '23233']) expect(matchesPresentationPin(value)).toBe(false)
+  })
   it('uses the supplied device-specific reveal and boot timing', () => {
     expect(landingTiming(1440).reveals).toEqual([.5, 1.2, 1.9, 2.6])
     expect(landingTiming(768).init).toBe(3000)

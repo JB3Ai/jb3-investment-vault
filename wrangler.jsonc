@@ -4,14 +4,30 @@
   "account_id": "18ab41342b712e6d2a83057299705832",
   "workers_dev": true,
   "preview_urls": false,
-  "cache": { "enabled": false, "cross_version_cache": false },
+  "cache": {
+    "enabled": false,
+    "cross_version_cache": false
+  },
   "main": "server/worker.ts",
   "compatibility_date": "2026-10-13",
   "assets": {
     "binding": "ASSETS",
-    "run_worker_first": ["/api/vault/*"],
+    "run_worker_first": [
+      "/api/vault/*"
+    ],
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   },
-  "observability": { "enabled": false }
+  "observability": {
+    "enabled": false
+  },
+  "kv_namespaces": [
+    {
+      "binding": "VAULT_PRESENTATION",
+      "id": "2eb83deffb514bf0b5f9e5bac448130a"
+    }
+  ],
+  "vars": {
+    "VAULT_PRESENTATION_RELEASE": "presentation-20261020-077e51db4b1411fa"
+  }
 }

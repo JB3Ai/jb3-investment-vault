@@ -11,7 +11,7 @@ async function setup(page: Page, options: { granted?: boolean; released?: boolea
   let releaseResponse: (() => void) | undefined
   const waiting = new Promise<void>(resolve => { releaseResponse = resolve })
   pendingResponses.set(page, () => releaseResponse!())
-  let recordRequests = 0
+  let recordRequests = 0, tokenRequests = 0
   const sectionId = options.financialSection ? 'financial-requirements' : 'introduction'
   const sectionTitle = options.financialSection ? 'Financial Requirements' : 'Introduction'
   const user = { id: accountId, aud: 'authenticated', role: 'authenticated', email: 'fixture@example.test', is_anonymous: false, app_metadata: {}, user_metadata: {}, created_at: '2026-10-15T00:00:00Z' }
@@ -20,7 +20,7 @@ async function setup(page: Page, options: { granted?: boolean; released?: boolea
   await page.route('http://127.0.0.1:54321/**', async route => {
     const url = new URL(route.request().url())
     let response: unknown
-    if (url.pathname === '/auth/v1/token') response = { access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_in: 3600, user }
+    if (url.pathname === '/auth/v1/token') { tokenRequests++; response = { access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_in: 3600, user } }
     else if (url.pathname === '/auth/v1/user') response = user
     else if (url.pathname === '/auth/v1/logout') response = {}
     else if (url.pathname.endsWith('/vault_memberships')) response = { access_level: 'PRIVATE' }
@@ -40,12 +40,20 @@ async function setup(page: Page, options: { granted?: boolean; released?: boolea
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) })
   })
   await page.goto('/')
-  await page.getByLabel('Email address').fill('fixture@example.test')
-  await page.getByLabel('Password', { exact: true }).fill('synthetic-only-password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Skip intro', exact: true }).click()
+  await page.getByLabel('Presentation PIN').fill('2323')
+  await page.getByRole('button', { name: 'Enter', exact: true }).click()
+  // Establish an existing synthetic Auth session through the SDK, never through UI.
+  // The mocked Auth user endpoint verifies it independently before RLS reads.
+  await page.evaluate(async ({ token }) => {
+    const modulePath = '/src/lib/supabase.ts'
+    const { supabase } = await import(modulePath)
+    const result = await supabase.auth.setSession({ access_token: token, refresh_token: 'synthetic-refresh' })
+    if (result.error) throw Error('Synthetic session fixture failed')
+  }, { token })
   await expect(page.getByRole('navigation', { name: 'Section index' })).toBeVisible()
   await page.getByRole('button', { name: 'Open ' + sectionTitle, exact: true }).click()
-  return { release: () => releaseResponse!(), recordRequests: () => recordRequests }
+  return { release: () => releaseResponse!(), recordRequests: () => recordRequests, tokenRequests: () => tokenRequests }
 }
 
 test('approved narratives load with exact paragraphs, provenance and no asset modules', async ({ page }, testInfo) => {
@@ -63,7 +71,7 @@ test('approved narratives load with exact paragraphs, provenance and no asset mo
   await expect(page.getByLabel('Starting monthly revenue')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('narrative-reader.png'), fullPage: true })
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
   await expect(page.getByText(body, { exact: true })).toHaveCount(0)
 })
 test('empty approved narratives show unavailable without legacy fallback', async ({ page }) => {
@@ -87,7 +95,7 @@ test('pending narrative response cannot reappear after sign-out', async ({ page 
   await expect.poll(fixture.recordRequests).toBeGreaterThan(0)
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   fixture.release()
-  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Approved synthetic narrative' })).toHaveCount(0)
 })
 
@@ -106,7 +114,7 @@ test('protected PDF uses same-origin bearer transport and retains the existing v
   await expect(page.locator('.react-pdf__Page__canvas')).toBeVisible({ timeout: 45000 })
   expect(gatewayCalls).toBe(1); expect(storageCalls).toBe(0)
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
   await expect(page.locator('.react-pdf__Page__canvas')).toHaveCount(0)
 })
 
@@ -135,7 +143,7 @@ test('a pending protected PDF cannot appear after sign-out', async ({ page }) =>
   await expect.poll(() => requested).toBe(true)
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   release()
-  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
   await expect(page.locator('.react-pdf__Page__canvas')).toHaveCount(0)
 })
 
@@ -151,4 +159,22 @@ test('local API fails closed over HTTP without exposing the SPA or server creden
   expect(unconfigured.status()).toBe(503); expect(await unconfigured.text()).toBe('')
   const invalid = await request.get(endpoint + '?bucket=media&path=arbitrary')
   expect(invalid.status()).toBe(404); expect(await invalid.text()).toBe('')
+})
+
+
+test('replaying the invitation preserves a valid session and still rechecks protected access', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const fixture = await setup(page)
+  expect(fixture.tokenRequests()).toBe(0)
+  await page.getByRole('button', { name: 'Replay introduction', exact: true }).click()
+  await expect(page.locator('#landing-title')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Approved synthetic narrative' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Enter vault', exact: true }).click()
+  await page.getByLabel('Presentation PIN').fill('2323')
+  await page.getByRole('button', { name: 'Enter', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Section index' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Private access pending.' })).toHaveCount(0)
+  expect(fixture.tokenRequests()).toBe(0)
+  await page.getByRole('button', { name: 'Open Introduction', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Approved synthetic narrative' })).toBeVisible()
 })

@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState,type KeyboardEvent} from 'react'
 import {LockKeyhole,ArrowLeft} from 'lucide-react'
+import { matchesPresentationPin } from '../lib/landingState'
 import '../styles/presentation-pin.css'
 export function PresentationPin({onBack,onSuccess,onInteract}:{onBack:()=>void;onSuccess:()=>void;onInteract:()=>void}){
  const [value,setValue]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[until,setUntil]=useState(0),[remaining,setRemaining]=useState(0)
@@ -9,7 +10,15 @@ export function PresentationPin({onBack,onSuccess,onInteract}:{onBack:()=>void;o
  useEffect(()=>{if(!until)return;const update=()=>setRemaining(Math.max(0,Math.ceil((until-Date.now())/1000)));update();const timer=setInterval(update,250);return()=>clearInterval(timer)},[until])
  async function submit(){
   if(busy||remaining||value.length!==4)return
-  onInteract();setBusy(true);setError('');const controller=new AbortController();pending.current=controller
+  onInteract()
+  // Hosted PIN is cosmetic: no token, cookie, grant or server-side session is created.
+  // Local owner review keeps its existing server-side check, separate from hosted access.
+  if(!(import.meta.env.DEV && import.meta.env.MODE === 'private-local')){
+   if(matchesPresentationPin(value)){setValue('');onSuccess()}
+   else{setError('That PIN was not accepted. Try again.');setValue('');input.current?.focus()}
+   return
+  }
+  setBusy(true);setError('');const controller=new AbortController();pending.current=controller
   try{const response=await fetch('/api/vault/local-review/presentation-pin',{method:'POST',headers:{'X-Vault-Local-Review':'1','Content-Type':'application/json'},body:JSON.stringify({pin:value}),cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal});if(!response.headers.get('cache-control')?.includes('no-store'))throw Error();if(response.status===429){const seconds=Math.min(60,Math.max(1,Number(response.headers.get('retry-after'))||30));setUntil(Date.now()+seconds*1000);setRemaining(seconds);setError('Please pause before trying again.')}else if(response.ok&&(await response.json()).ok===true){setValue('');onSuccess()}else{setError('That PIN was not accepted. Try again.');setValue('');input.current?.focus()}}
   catch{if(!controller.signal.aborted)setError('Entry check unavailable. Please try again.')}
   finally{if(!controller.signal.aborted)setBusy(false)}

@@ -37,11 +37,22 @@ export interface LocalReview {
     revision?: { owner: string; recordedOn: string; source: string; workbook: string; workbookSha256: string; therapy: { sessionZar: number; sessionsPerMonth: number; fortnightlyAverageMonthlyZar: number } }
   }
 }
-export const localReviewMode = import.meta.env.DEV && import.meta.env.MODE === 'private-local'
-export async function localReviewFetch(resource: string, signal?: AbortSignal) {
+export const presentationReleaseMode = import.meta.env.VITE_VAULT_MODE === 'presentation'
+export const localReviewMode = presentationReleaseMode || import.meta.env.DEV && import.meta.env.MODE === 'private-local'
+export async function localReviewFetch(resource: string, signal?: AbortSignal, init: RequestInit = {}): Promise<Response> {
   if (!localReviewMode) throw new Error('Local owner review is unavailable')
-  const response = await fetch(`/api/vault/local-review/${resource}`, {
-    headers: { 'X-Vault-Local-Review': '1' }, cache: 'no-store', credentials: 'omit', signal,
+  if(presentationReleaseMode && init.method === 'POST' && ['financial-export','master-pdf'].includes(resource)){
+    const options=JSON.parse(String(init.body)),content=await localReviewFetch('content',signal),data=await content.json() as LocalReview
+    const {presentationWorkbook,presentationPdf}=await import('./presentationExports')
+    const {validSustainable,emptySustainable}=await import('./financialScenarios')
+    const {validExchangeRate}=await import('./financialSchedules')
+    if(!['combined','personal','business'].includes(options.scope)||!validExchangeRate(options.zarPerGbp))throw Error('Invalid export assumption')
+    const scenario=options.scenario?validSustainable(options.scenario):emptySustainable
+    const bytes=resource==='financial-export'?presentationWorkbook(data.finances,options.scope,options.zarPerGbp,scenario):await presentationPdf(data,options.zarPerGbp,scenario,async id=>new Uint8Array(await (await localReviewFetch('assets/'+id,signal)).arrayBuffer()))
+    return new Response(bytes as BodyInit,{headers:{'Cache-Control':'no-store','Content-Type':resource==='financial-export'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf'}})
+  }
+  const response = await fetch(`${presentationReleaseMode ? '/api/vault/presentation/' : '/api/vault/local-review/'}${resource}`, {
+    ...init, headers: { ...(presentationReleaseMode ? {} : { 'X-Vault-Local-Review': '1' }), ...init.headers }, cache: 'no-store', credentials: 'omit', signal,
   })
   if (!response.ok) throw new Error('Private local content could not be loaded. Check the local intake and source files.')
   return response
@@ -49,8 +60,8 @@ export async function localReviewFetch(resource: string, signal?: AbortSignal) {
 
 export async function localFinancialExport(scope: 'combined' | 'personal' | 'business', zarPerGbp: number, scenario?: SustainableInput) {
   if (!localReviewMode) throw new Error('Local owner export is unavailable')
-  const response = await fetch('/api/vault/local-review/financial-export', {
-    method: 'POST', headers: { 'X-Vault-Local-Review': '1', 'Content-Type': 'application/json' },
+  const response = await localReviewFetch('financial-export', undefined, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scope, zarPerGbp, ...(scenario?{scenario}:{}) }), cache: 'no-store', credentials: 'omit', redirect: 'error',
   })
   if (!response.ok || !response.headers.get('cache-control')?.includes('no-store') || response.headers.get('content-type') !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') throw new Error('Private workbook export unavailable. Check the local workbook runtime and source validation.')

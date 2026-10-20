@@ -7,16 +7,16 @@ import { protectedDownload } from '../lib/protectedDownloads'
 import type { VaultDocument } from '../types'
 const SecureDocumentViewer = lazy(() => import('./SecureDocumentViewer'))
 interface OpenDocument { source: string | Uint8Array; title: string; expiresAt?: number }
-export function DocumentLibrary({ onBack }: { onBack: () => void }) {
+export function DocumentLibrary({ onBack, presentationOnly = false }: { onBack: () => void; presentationOnly?: boolean }) {
   const [open, setOpen] = useState<OpenDocument | null>(null)
   const [documents, setDocuments] = useState<VaultDocument[]>([])
-  const [loading, setLoading] = useState(secureMode), [busyId, setBusyId] = useState('')
+  const [loading, setLoading] = useState(secureMode && !presentationOnly), [busyId, setBusyId] = useState('')
   const [error, setError] = useState(''), [query, setQuery] = useState(''), [revision, setRevision] = useState(0)
   const data = useMemo(() => createDemoPdf(), [])
   const pending = useRef<AbortController | null>(null)
   useEffect(() => () => { pending.current?.abort() }, [])
   useEffect(() => {
-    if (!secureMode || !supabase) return
+    if (presentationOnly || !secureMode || !supabase) return
     let cancelled = false
     setLoading(true); setError('')
     supabase.from('vault_documents').select('*').order('title').then(result => {
@@ -26,7 +26,7 @@ export function DocumentLibrary({ onBack }: { onBack: () => void }) {
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [revision])
+  }, [revision, presentationOnly])
   async function openDocument(doc: VaultDocument) {
     if (!supabase || !doc.storage_path) return
     pending.current?.abort()
@@ -43,9 +43,9 @@ export function DocumentLibrary({ onBack }: { onBack: () => void }) {
   const visible = documents.filter(doc => doc.title.toLowerCase().includes(query.toLowerCase()))
   return <main id="main-content" className="reader"><button className="text-button" onClick={onBack}><ArrowLeft size={16} />Back to Console</button>
     {open ? <Suspense fallback={<p role="status" className="empty-state">Loading PDF reader…</p>}><SecureDocumentViewer source={open.source} title={open.title} expiresAt={open.expiresAt} onClose={() => setOpen(null)} /></Suspense> : <><header className="reader-heading library-heading"><h1>The document library.</h1><p>Evidence, with its source and status in view.</p></header>
-    <p className="notice"><LockKeyhole size={18} />{secureMode ? 'Your account determines which documents are available. Viewing sessions expire after 55 seconds.' : 'Local demonstration. Confidential documents are unavailable.'}</p>
+    <p className="notice"><LockKeyhole size={18} />{presentationOnly ? 'Document access pending.' : secureMode ? 'Your account determines which documents are available. Viewing sessions expire after 55 seconds.' : 'Local demonstration. Confidential documents are unavailable.'}</p>
     {error && <div className="form-error" role="alert">{error}<button className="text-button" onClick={() => setRevision(n => n + 1)}>Retry library</button></div>}
-    {secureMode ? <><label className="document-search"><Search size={16} /><input aria-label="Search documents" placeholder="Search available documents" value={query} onChange={e => setQuery(e.target.value)} /></label>{loading ? <p className="empty-state" role="status">Loading authorised documents…</p> : visible.length === 0 ? <p className="empty-state">No documents available{query ? ' matching your search' : ' for this account'}.</p> : visible.map(doc => <button className="document-row" key={doc.id} disabled={!!busyId} onClick={() => void openDocument(doc)}><FileText size={25} /><span><strong>{doc.title}</strong><small>{doc.disclosure} · {doc.verification} · {busyId === doc.id ? 'Checking access…' : 'PDF'}</small></span><ArrowUpRight size={18} /></button>)}</> :
+    {secureMode ? <><label className="document-search"><Search size={16} /><input aria-label="Search documents" placeholder="Search available documents" value={query} onChange={e => setQuery(e.target.value)} /></label>{loading ? <p className="empty-state" role="status">Loading authorised documents…</p> : visible.length === 0 ? <p className="empty-state">{presentationOnly ? 'Document access pending.' : <>No documents available{query ? ' matching your search' : ' for this account'}.</>}</p> : visible.map(doc => <button className="document-row" key={doc.id} disabled={!!busyId} onClick={() => void openDocument(doc)}><FileText size={25} /><span><strong>{doc.title}</strong><small>{doc.disclosure} · {doc.verification} · {busyId === doc.id ? 'Checking access…' : 'PDF'}</small></span><ArrowUpRight size={18} /></button>)}</> :
     <><button className="document-row" onClick={() => setOpen({ source: data, title: 'Demonstration briefing' })}><FileText size={25} /><span><strong>Demonstration briefing</strong><small>PDF · Synthetic demonstration · Not verified</small></span><ArrowUpRight size={18} /></button><p className="module-note">This sample is generated locally. No private file is served from the public assets folder.</p></>}</>}
   </main>
 }
