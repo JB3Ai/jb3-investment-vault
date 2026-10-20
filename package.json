@@ -6,13 +6,15 @@
   "scripts": {
     "content:import": "node --experimental-strip-types content-migration/local-importer.ts",
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "dev:private": "vite --mode private-local --host 127.0.0.1 --port 5174",
+    "build": "node scripts/check-visible-copy.mjs && tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "deploy": "npm run build && wrangler deploy",
-    "deploy:check": "npm run build && wrangler deploy --dry-run"
+    "deploy:check": "npm run build && wrangler deploy --dry-run",
+    "check:copy": "node scripts/check-visible-copy.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.3",

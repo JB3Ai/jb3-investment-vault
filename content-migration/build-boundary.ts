@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import type { Plugin } from 'vite'
-const privateMarker = (text: string) => /JB3_(PRIVATE_CONTENT|APPROVED_MASTER|MASTER_INTAKE)_V1/.test(text)
+const privateMarker = (text: string) => /JB3_(PRIVATE_CONTENT|APPROVED_MASTER|MASTER_INTAKE|SUPPORTING_EVIDENCE_REVIEW)_V1/.test(text)
 
 export function assertPublicAssets(root: string) {
   const publicDir = path.join(root, 'public')
@@ -13,7 +13,8 @@ export function assertPublicAssets(root: string) {
 export function assertPublicModule(root: string, id: string, source?: string) {
   const file = id.split('?')[0]
   const normalized = file.replaceAll('\\', '/')
-  if (/\/(content-migration|private-content|sources|batches)\//.test(normalized)) throw new Error('Private ingestion module/source cannot enter the frontend graph')
+  if (/\/(content-migration|private-content|sources|batches|server|supabase|scripts|docs)\//.test(normalized)) throw new Error('Private ingestion or server module/source cannot enter the frontend graph')
+  if (source && /SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY/.test(source)) throw new Error('Server credential reference cannot enter the frontend graph')
   if (path.isAbsolute(file)) {
     const rel = path.relative(realpathSync(root), realpathSync(file))
     if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('External source cannot enter frontend build')

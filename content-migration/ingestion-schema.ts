@@ -1,3 +1,4 @@
+import { thumbnailReference } from '../src/lib/thumbnailReference.ts'
 // Schema code is safe to version; populated manifests are private and must stay external.
 export const sectionIds = ['introduction', 'current-position', 'history-evidence', 'assets-claims', 'financial-requirements', 'beobacht-alignment', 'commercial-pipeline', 'southern-african-strategy', 'financial-forecast', 'investment-structures', 'closing'] as const
 export type ContentSectionId = typeof sectionIds[number]
@@ -91,5 +92,14 @@ export function parseManifest(value: unknown): ContentManifest {
       } else check(r.file === null, `${where}: only photographs and PDFs attach binary files`)
     }
   }
-  return value as ContentManifest
+  const manifest=value as ContentManifest
+  const all=new Map(manifest.sections.flatMap(section=>section.records.map(record=>[record.id.toLowerCase(),record] as const)))
+  for(const record of all.values()) {
+    const link=thumbnailReference(record.provenance.sourceReference)
+    if(!link)continue
+    const parent=all.get(link.parentId)
+    check(record.kind==='photograph'&&record.file?.sha256.toLowerCase()===link.imageSha256&&parent?.kind==='pdf'&&parent.file?.sha256.toLowerCase()===link.parentSha256&&record.classification===parent.classification,'Thumbnail must bind an existing PDF and inherit its exact classification and source hash')
+    check(record.approval!=='approved'||parent.approval==='approved','Thumbnail approval cannot bypass parent approval')
+  }
+  return manifest
 }

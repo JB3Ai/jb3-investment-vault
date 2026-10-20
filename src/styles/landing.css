@@ -1,0 +1,44 @@
+/* Scoped to the entry experience: approved console tokens and layout stay intact. */
+.vault-landing{--landing-champagne:#e8d5c4;--landing-glow:#e8d5c433;position:relative;min-height:100svh;background:radial-gradient(ellipse at 50% 48%,#17171544,transparent 70%),#080808;color:#eee9df;isolation:isolate}
+.vault-landing::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background:repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 4px);opacity:.45}
+.vault-landing .landing-main{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;padding:110px 48px 130px}
+.vault-landing .landing-identity{position:absolute;top:40px;left:48px;display:flex;flex-direction:column;gap:8px;font:8px var(--mono);letter-spacing:2px;color:#827b6e}
+.vault-landing .landing-identity span+span{font-size:7px;letter-spacing:1px;color:#645e55}
+.vault-landing .landing-controls{position:absolute;top:24px;right:36px;z-index:5;display:flex;align-items:center;gap:18px}
+.vault-landing .landing-controls button{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;color:#b8ad9e;transition:color .2s,filter .2s}
+.vault-landing .landing-controls button:hover{color:var(--landing-champagne);filter:drop-shadow(0 0 8px var(--landing-glow))}
+.vault-landing .landing-skip{font:9px var(--mono);letter-spacing:2px;text-transform:uppercase;gap:10px;padding:10px}
+.vault-landing .landing-copy{width:100%;max-width:880px;display:flex;flex-direction:column;align-items:center;gap:42px;text-align:center}
+.vault-landing .landing-title{font:10px var(--mono);letter-spacing:5px;text-transform:uppercase;color:var(--landing-champagne);margin:0 0 32px;line-height:1.8}
+.vault-landing .landing-text{font:italic 400 clamp(28px,2.5vw,36px)/1.35 Georgia,'Times New Roman',serif;margin:0 auto;max-width:780px;color:#e9e7e2;text-wrap:balance}
+.vault-landing .landing-separator{width:min(100%,640px);height:1px;background:linear-gradient(90deg,transparent,#d5c7af1a,transparent)}
+.vault-landing .landing-text--secondary{font:400 22px/1.55 Georgia,'Times New Roman',serif;color:#b3afa7;max-width:690px;margin:0 auto;text-wrap:balance}
+.vault-landing .landing-disclaimer{font:italic 14px/1.7 Georgia,'Times New Roman',serif;color:#a39a8c;margin:26px auto 0;max-width:470px;text-wrap:balance}
+.vault-landing .landing-button-wrapper{padding-top:14px;animation:landing-button .6s ease-out var(--t-button) both}
+.vault-landing .landing-enter{display:inline-flex;align-items:center;justify-content:center;gap:22px;min-height:58px;padding:18px 42px;border:1px solid #e8d5c44d;background:#e8d5c40b;color:var(--landing-champagne);font:10px var(--mono);letter-spacing:4px;text-transform:uppercase;transition:border-color .3s,box-shadow .3s,background .3s,transform .3s}
+.vault-landing .landing-enter:hover{border-color:var(--landing-champagne);box-shadow:0 0 28px var(--landing-glow);background:#e8d5c414;transform:scale(1.025)}
+.vault-landing .landing-block{animation:landing-reveal var(--dur-reveal) cubic-bezier(.23,1,.32,1) both}
+.vault-landing .landing-block--1{animation-delay:var(--t-block-1)} /* shutter-whoosh: -25 dB */
+.vault-landing .landing-block--2{animation-delay:var(--t-block-2)} /* mechanism-click: -20 dB */
+.vault-landing .landing-block--3{animation-delay:var(--t-block-3)} /* whir-engage: -26 dB */
+/* confirmation-chime: button reveal, -24 dB. Ambient -27 dB, gesture unlock only. */
+.vault-landing .landing-footer{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;align-items:center;flex-direction:column;gap:20px;color:#71685a;text-align:center}
+.vault-landing .landing-footer>span{height:40px;width:1px;background:linear-gradient(#e8d5c422,transparent)}
+.vault-landing .landing-footer p{font:7px var(--mono);letter-spacing:3px;text-transform:uppercase;margin:0;white-space:nowrap}
+.vault-landing .landing-initialisation{min-height:100svh;padding:100px 24px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;animation:landing-reveal .5s ease-out both}
+.vault-landing .landing-initialisation h1{font:400 clamp(30px,4vw,52px)/1.3 Georgia,serif;color:var(--landing-champagne)}
+.vault-landing .landing-initialisation p{font:10px var(--mono);letter-spacing:2px;color:#aaa091;margin:28px 0}
+.vault-landing .landing-progress{width:130px;height:1px;background:#e8d5c466;transform-origin:left;animation:landing-progress var(--init-duration) ease-out both}
+.vault-landing .landing-boot{pointer-events:none;animation:landing-power var(--boot-duration) ease-out both}
+.vault-landing .landing-boot .console-heading,.vault-landing .landing-boot .console-engraving,.vault-landing .landing-boot .section-index,.vault-landing .landing-boot .oled-open,.vault-landing .landing-boot .oled-status{visibility:hidden}
+.vault-landing .landing-boot .knob-face{animation:landing-dial var(--boot-duration) ease-out both}
+.vault-landing .landing-boot .oled-content{animation:landing-power var(--boot-duration) ease-out both}
+@keyframes landing-reveal{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes landing-button{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+@keyframes landing-power{0%{opacity:0;filter:brightness(.2)}40%{opacity:.6;filter:brightness(.4)}100%{opacity:1;filter:brightness(1)}}
+@keyframes landing-dial{from{transform:rotate(-35deg)}to{transform:rotate(0)}}
+@keyframes landing-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:768px){.vault-landing .landing-main{padding:100px 32px 120px}.vault-landing .landing-copy{gap:30px}.vault-landing .landing-identity{left:32px;top:32px}.vault-landing .landing-controls{right:20px;top:16px}.vault-landing .landing-text{font-size:29px}.vault-landing .landing-text--secondary{font-size:20px}.vault-landing .landing-enter{padding:16px 32px}.vault-landing .landing-title{letter-spacing:4px}}
+@media(max-width:480px){.vault-landing .landing-main{padding:112px 24px 115px}.vault-landing .landing-copy{gap:24px}.vault-landing .landing-identity{top:29px;left:24px;max-width:120px;font-size:7px;line-height:1.7;letter-spacing:1px}.vault-landing .landing-identity span+span{display:none}.vault-landing .landing-controls{top:16px;right:14px;gap:5px}.vault-landing .landing-skip{font-size:8px;letter-spacing:1px;padding:8px}.vault-landing .landing-title{font-size:9px;letter-spacing:3px;margin-bottom:25px}.vault-landing .landing-text{font-size:25px;line-height:1.4}.vault-landing .landing-text--secondary{font-size:18px}.vault-landing .landing-disclaimer{font-size:13px;margin-top:28px}.vault-landing .landing-enter{font-size:9px;letter-spacing:3px;padding:16px 28px}.vault-landing .landing-button-wrapper{padding-top:8px}.vault-landing .landing-footer{bottom:24px;gap:14px}.vault-landing .landing-footer>span{height:28px}}
+@media(max-height:700px) and (min-width:769px){.vault-landing .landing-main{padding-top:90px;padding-bottom:90px}.vault-landing .landing-copy{gap:24px}.vault-landing .landing-text{font-size:30px}.vault-landing .landing-title{margin-bottom:20px}.vault-landing .landing-disclaimer{margin-top:24px}.vault-landing .landing-footer{bottom:16px}.vault-landing .landing-footer>span{height:24px}}
+@media(prefers-reduced-motion:reduce){.vault-landing *,.vault-landing *::before,.vault-landing *::after{animation:none!important;transition:none!important;transform:none!important;filter:none!important}.vault-landing .landing-footer{transform:translateX(-50%)!important}}

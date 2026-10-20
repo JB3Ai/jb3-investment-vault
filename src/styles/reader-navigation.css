@@ -1,0 +1,17 @@
+.reader-layout{display:grid;grid-template-columns:172px minmax(0,1fr);gap:28px;max-width:1340px;width:100%;margin:0 auto;align-items:start}.reader-layout>.reader{min-width:0}.chapter-navigation{position:sticky;top:24px;padding-top:32px;min-width:0}.chapter-back{font-size:11px;min-height:44px;white-space:nowrap}.chapter-list{margin-top:24px;padding:20px 0;border-top:1px solid #bca58066}.chapter-list h2,.chapter-selector{font:10px/1.5 var(--mono);text-transform:uppercase;letter-spacing:2px;color:var(--champagne)}.chapter-list h2{margin-bottom:16px}.chapter-list ol{list-style:none;padding:0;margin:0}.chapter-list button{position:relative;width:100%;display:flex;align-items:baseline;gap:10px;padding:12px 6px 12px 10px;min-height:44px;text-align:left;border-left:2px solid transparent;color:var(--muted);font:12px/1.5 Arial,sans-serif;transition:background .15s,color .15s,border-color .15s}.chapter-list button>span:first-child{font:10px var(--mono);color:#ae9b78}.chapter-list button:hover{color:var(--champagne);background:#bca58009}.chapter-list button[aria-current=page]{border-left-color:var(--amber);background:linear-gradient(90deg,#bca58015,transparent);color:#ecd9b8}.chapter-navigation :is(button,select):focus-visible{outline:2px solid var(--amber);outline-offset:3px}.chapter-selector{display:none}
+/* Native option popups need opaque colours; the select face uses a metal gradient. */
+.chapter-selector select{color-scheme:dark}
+.chapter-selector select option{background-color:#20221e;color:#eee9df}
+/* Style the popup itself where supported, rather than relying on OS option colours. */
+@supports (appearance:base-select){
+  .chapter-selector select,.chapter-selector select::picker(select){appearance:base-select}
+  .chapter-selector select::picker(select){background:#20221e;color:#eee9df;border:1px solid #bca58070;border-radius:3px;box-shadow:0 10px 28px #0009;padding:4px;max-height:min(65vh,420px);overflow-y:auto}
+  .chapter-selector select option{padding:9px 12px;min-height:36px;border-radius:2px;font:13px/1.4 Arial,sans-serif}
+  .chapter-selector select option:is(:hover,:focus-visible){background:#393b32;color:#fff4dc}
+  .chapter-selector select option:checked{background:#454337;color:#f3d29b}
+}
+.reader-layout .reader-toolbar{justify-content:flex-end}
+@media(max-width:1359px){.reader-layout{display:block;max-width:1140px}.chapter-navigation{position:static;padding-top:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #bca58066;padding-bottom:18px}.chapter-list{display:none}.chapter-selector{display:flex;align-items:center;gap:12px;letter-spacing:1px}.chapter-selector select{max-width:360px;min-width:0;min-height:44px;border:1px solid #bca58070;border-radius:3px;background:var(--control-metal-surface);box-shadow:inset 0 1px #eee4ca24;color:var(--champagne);font:13px Arial,sans-serif;padding:10px}.reader-layout .reader-toolbar{margin-bottom:32px}}
+@media(max-width:560px){.chapter-navigation{align-items:stretch;flex-direction:column;gap:8px;padding-top:14px;padding-bottom:16px}.chapter-selector{display:grid;grid-template-columns:1fr;gap:6px}.chapter-selector select{width:100%;max-width:none}.chapter-back{align-self:flex-start}.reader-layout .reader-toolbar{margin-bottom:24px}}
+@media(prefers-reduced-motion:reduce){.chapter-list button{transition:none}}
+@media print{.chapter-navigation{display:none}.reader-layout{display:block}}

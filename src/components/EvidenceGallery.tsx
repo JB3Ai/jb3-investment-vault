@@ -1,12 +1,22 @@
-import { useState } from 'react'
-import { ImageOff, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ImageOff, Minus, Plus } from 'lucide-react'
 import type { VaultImage } from '../types'
-export function EvidenceGallery({ images }: { images: VaultImage[] }) {
+import type { LaboratoryEvidenceReview } from '../lib/laboratoryEvidence'
+import '../styles/laboratory-evidence.css'
+export function EvidenceGallery({ images, review = false, displayReview }: { images: VaultImage[]; review?: boolean; displayReview?: LaboratoryEvidenceReview | null }) {
   const [index, setIndex] = useState(0)
-  const current = images[index]
-  if (!current) return <p className="empty-state">No approved images available.</p>
-  return <section className="content-module"><div className="module-heading"><h2>COVID laboratory case study</h2><span className="metadata">EVIDENCE PENDING</span></div><p className="module-note">Photographs and case-study facts must be supplied and verified before publication.</p>
-    <figure className="gallery-figure">{current.url ? <img src={current.url} alt={current.alt} /> : <div className="gallery-empty"><ImageOff size={34} strokeWidth={1} /><span>Photograph not yet supplied</span><small>No illustrative photograph is presented as evidence.</small></div>}<figcaption aria-live="polite"><span>{current.caption}</span><span className="mono">{index + 1} / {images.length}</span></figcaption></figure>
-    <div className="gallery-controls"><button className="text-button" disabled={index === 0} onClick={() => setIndex(index - 1)}><ChevronLeft size={16} />Previous image</button><button className="text-button" disabled={index === images.length - 1} onClick={() => setIndex(index + 1)}>Next image<ChevronRight size={16} /></button></div>
+  const [unplaced, setUnplaced] = useState<string | null>(null)
+  const touchStart=useRef<number|null>(null)
+  const reference = unplaced ? displayReview?.unplaced.find(item => item.recordId === unplaced) : displayReview?.slots[index]
+  const current = displayReview ? images.find(image => image.id === reference?.recordId) : images[index]
+  const count = displayReview?.slots.length ?? images.length
+  const move=(next:number)=>{setUnplaced(null);setIndex(Math.max(0,Math.min(count-1,next)))}
+  if (!images.length) return <p className="empty-state">No approved images available.</p>
+  return <section className="content-module"><div className="module-heading"><h2>COVID laboratory case study</h2><span className="metadata">EVIDENCE PENDING</span></div><p className="module-note">{review ? 'Private source photographs for owner review. Review sequence does not establish chronology. Publication, chronology and certification verification remain pending.' : 'Photographs and case-study facts must be supplied and verified before publication.'}</p>
+    {displayReview && <p className="module-note">BRUCE_PRIVATE / DRAFT. Display positions are founder-provided, not independently verified chronology. Positions without an assigned image await explicit owner confirmation.</p>}
+    <figure className="gallery-figure" tabIndex={0} aria-label="Laboratory image viewer" onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();move(event.key==='Home'?0:event.key==='End'?count-1:index+(event.key==='ArrowRight'?1:-1))}}} onTouchStart={event=>{touchStart.current=event.touches[0]?.clientX??null}} onTouchEnd={event=>{if(touchStart.current!==null){const distance=touchStart.current-(event.changedTouches[0]?.clientX??touchStart.current);if(Math.abs(distance)>50)move(index+(distance>0?1:-1));touchStart.current=null}}}>{current?.url ? <img src={current.url} alt={current.alt} data-record-id={current.id} /> : <div className="gallery-empty"><ImageOff size={34} strokeWidth={1} /><span>{displayReview ? `Position ${index + 1} awaiting owner confirmation` : 'Photograph not yet supplied'}</span><small>{displayReview ? 'No photograph has been assigned to this position.' : 'No illustrative photograph is presented as evidence.'}</small></div>}<figcaption aria-live="polite"><span>{current?.caption ?? 'Display position unassigned.'}{displayReview && reference?.originalNumber ? <small className="gallery-original-number">Original photo {reference.originalNumber}{unplaced ? ' · awaiting placement' : ` · founder-provided position ${index + 1}`}</small> : null}</span><span className="mono">{unplaced ? 'UNPLACED' : `${String(index+1).padStart(2,'0')} / ${String(count).padStart(2,'0')}`}</span></figcaption></figure>
+    <div className="gallery-controls"><button className="text-button hifi-picture-button" disabled={!unplaced&&index===0} onClick={()=>move(index-1)}><Minus size={18}/>Previous image</button><button className="text-button hifi-picture-button" disabled={!unplaced&&index===count-1} onClick={()=>move(index+1)}>Next image<Plus size={18}/></button></div>
+    {current?.originalFilename&&<details className="gallery-provenance"><summary>Original photograph provenance</summary><p>{current.originalFilename}</p><p>Record: {current.id}<br/>SHA-256: {current.sha256}</p></details>}
+    {displayReview && <><div className="gallery-position-buttons" aria-label="Founder-provided display positions">{displayReview.slots.map((slot, position) => <button key={slot.position} aria-label={`Show position ${slot.position}${slot.originalNumber ? `, original photo ${slot.originalNumber}` : ', awaiting owner confirmation'}`} aria-pressed={!unplaced && index === position} onClick={() => { setUnplaced(null); setIndex(position) }}>{slot.position}{slot.recordId === null ? ' · pending' : ''}</button>)}</div><div className="gallery-unplaced"><h3>Original photographs awaiting placement</h3><p className="module-note">These originals remain available for review. Neither has been assigned to the unresolved positions.</p>{displayReview.unplaced.map(item => <button className="text-button" key={item.recordId} aria-pressed={unplaced === item.recordId} onClick={() => setUnplaced(item.recordId)}>Review original photo {item.originalNumber} · unplaced</button>)}</div></>}
   </section>
 }

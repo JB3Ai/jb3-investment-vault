@@ -21,9 +21,9 @@ export const demoSections: VaultSection[] = definitions.map(([id, title, subtitl
   narrative: [{ heading, body }],
   evidence: [{ id: `${id}-source`, title: 'Source material pending', description: 'Approved source evidence has not been supplied.', status: 'PENDING', source: null }],
   images: id === 'history-evidence' ? [
-    { id: 'lab-space', caption: 'Laboratory environment — photograph pending', alt: 'Reserved for a verified photograph of the laboratory environment', url: null },
-    { id: 'lab-process', caption: 'Process and equipment — photograph pending', alt: 'Reserved for a verified photograph of laboratory equipment', url: null },
-    { id: 'lab-team', caption: 'People and delivery — photograph pending', alt: 'Reserved for an approved photograph of the laboratory team', url: null },
+    { id: 'lab-space', caption: 'Laboratory environment: photograph pending', alt: 'Reserved for a verified photograph of the laboratory environment', url: null },
+    { id: 'lab-process', caption: 'Process and equipment: photograph pending', alt: 'Reserved for a verified photograph of laboratory equipment', url: null },
+    { id: 'lab-team', caption: 'People and delivery: photograph pending', alt: 'Reserved for an approved photograph of the laboratory team', url: null },
   ] : [],
   documents: [], updated_at: '2026-10-13', verification: 'DEMONSTRATION', disclosure: 'COMMERCIAL',
 }))

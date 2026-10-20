@@ -1,9 +1,11 @@
+import {presentationView} from '../lib/presentationCopy'
 import type { VaultSection } from '../types'
 import { AnalogKnob } from './AnalogKnob'
 import { OLEDPanel } from './OLEDPanel'
 import { SectionIndex } from './SectionIndex'
 
 export function ConsoleFrame({ sections, selected, onSelect, onOpen }: { sections: VaultSection[]; selected: VaultSection; onSelect: (id: string) => void; onOpen: (id: string) => void }) {
+  sections=presentationView(sections);selected=presentationView(selected)
   return <main id="main-content" className="console-page console-asymmetrical">
     <div className="console-heading"><h1>Conviction, made tangible.</h1><p>The context. The evidence. The opportunity.</p></div>
     <section className="console-frame" aria-label="Investment vault console">

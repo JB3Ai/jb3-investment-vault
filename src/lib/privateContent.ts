@@ -1,4 +1,7 @@
+import { commercialDocumentVisible } from './commercialReview'
+import { thumbnailReference } from './thumbnailReference'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { protectedDownload } from './protectedDownloads'
 // Types only: the importer and manifest parser must never enter the browser graph.
 import type { Classification, ContentRecord, ContentSectionId, Provenance } from '../../content-migration/ingestion-schema'
 
@@ -64,13 +67,35 @@ export async function loadApprovedSection(client: SupabaseClient, sectionId: Con
   return ((result.data ?? []) as ApprovedContent[]).map(approved)
 }
 /** Rechecks metadata on every download; caller cannot provide an arbitrary object path. */
-export async function downloadApprovedAsset(client: SupabaseClient, recordId: string) {
+export async function downloadApprovedAsset(client: SupabaseClient, recordId: string, signal?: AbortSignal) {
   await requireReleasedUser(client)
   const result = await client.from('vault_content_records').select('*').eq('id', recordId).eq('approval', 'approved').maybeSingle()
   if (result.error || !result.data) throw new Error('Asset unavailable for this account')
   const record = approved(result.data as ApprovedContent)
   if (!record.storage_path || !['pdf', 'photograph'].includes(record.kind)) throw new Error('Record has no downloadable asset')
-  const file = await client.storage.from('vault-evidence').download(record.storage_path)
-  if (file.error || !file.data) throw new Error('Private asset access denied')
-  return { blob: file.data, record }
+  const blob = await protectedDownload(client, 'assets', recordId, signal)
+  return { blob, record }
+}
+
+
+/** General collection excludes restricted legal evidence even for a legal-granted user. */
+export async function loadApprovedBrochures(client: SupabaseClient) {
+  await requireReleasedUser(client)
+  const result = await client.from('vault_content_records').select('*').eq('kind', 'pdf').eq('approval', 'approved').in('classification', ['BRUCE_PRIVATE', 'COMMERCIAL']).order('id')
+  if (result.error) throw new PrivateNarrativeError('unavailable', 'The private brochure collection is unavailable.')
+  const documents = ((result.data ?? []) as ApprovedContent[]).map(row => {
+    approved(row)
+    if (row.kind !== 'pdf' || !['BRUCE_PRIVATE', 'COMMERCIAL'].includes(row.classification) || typeof row.payload.title !== 'string' || !row.payload.title.trim() || !row.storage_path || row.mime_type !== 'application/pdf') throw new Error('Invalid brochure response rejected')
+    return row
+  }).filter(row=>commercialDocumentVisible({title:String(row.payload.title),originalFilename:row.provenance.originalFilename}))
+  if (!documents.length) return { documents, thumbnails: [] as ApprovedContent[] }
+  const images = await client.from('vault_content_records').select('*').eq('kind', 'photograph').eq('approval', 'approved').in('classification', ['BRUCE_PRIVATE', 'COMMERCIAL']).order('id')
+  if (images.error) throw new Error('Private cover metadata unavailable')
+  const thumbnails = ((images.data ?? []) as ApprovedContent[]).filter(row => {
+    const link = thumbnailReference(row.provenance?.sourceReference)
+    if (!link) return false
+    const parent = documents.find(document => document.id === link.parentId)
+    return !!parent && row.kind === 'photograph' && row.approval === 'approved' && row.verification !== 'awaiting-verification' && row.classification === parent.classification && row.mime_type === 'image/png' && !!row.storage_path && link.parentSha256 === parent.sha256 && link.imageSha256 === row.sha256
+  })
+  return { documents, thumbnails }
 }

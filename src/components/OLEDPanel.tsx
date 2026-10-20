@@ -4,7 +4,9 @@ import type { VaultSection } from '../types'
 import { sectionNumber } from '../content/registry'
 
 export function OLEDPanel({ section, onOpen }: { section: VaultSection; onOpen: () => void }) {
-  return <div className="oled-bezel"><div className="oled-panel">
+  return <div className="oled-bezel">
+    {['tl', 'tr', 'bl', 'br'].map(position => <span key={position} className={`oled-fastener oled-fastener-${position}`} aria-hidden="true" />)}
+    <div className="oled-panel">
     <motion.div key={section.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .2 }} className="oled-content">
       <div className="oled-top"><span><b>{sectionNumber(section.number)}</b> / {section.title}</span><span className="signal-line" aria-hidden="true" /></div>
       <div aria-live="polite" aria-atomic="true"><h2>{section.subtitle}</h2><p>{section.overview}</p></div>

@@ -1,11 +1,11 @@
 // A genuine one-page PDF generated locally; contains synthetic text only.
 export function createDemoPdf(): Uint8Array {
-  const content = 'BT /F1 24 Tf 55 760 Td (JB3 PRIVATE INVESTMENT VAULT) Tj 0 -40 Td /F1 12 Tf (SYNTHETIC DEMONSTRATION - NOT VERIFIED) Tj 0 -35 Td (No investment facts, contracts or financial evidence are supplied.) Tj 0 -24 Td (This PDF demonstrates the document reader only.) Tj 0 -24 Td (Confidential documents must use authenticated private storage.) Tj ET'
+  const content = 'BT /F1 24 Tf 55 760 Td (JB³ PRIVATE INVESTMENT VAULT) Tj 0 -40 Td /F1 12 Tf (SYNTHETIC DEMONSTRATION - NOT VERIFIED) Tj 0 -35 Td (No investment facts, contracts or financial evidence are supplied.) Tj 0 -24 Td (This PDF demonstrates the document reader only.) Tj 0 -24 Td (Confidential documents must use authenticated private storage.) Tj ET'.replace(/[^\x00-\x7f]/g, character => '\\' + character.charCodeAt(0).toString(8).padStart(3, '0'))
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     '<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream',
   ]
   let pdf = '%PDF-1.4\n'

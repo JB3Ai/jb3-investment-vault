@@ -4,8 +4,8 @@ test('entry, complete index, rotary keyboard control and reading navigation', as
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Private by intention/ })).toBeVisible()
-  await page.getByRole('button', { name: 'Explore the demonstration' }).click()
+  await expect(page.getByRole('heading', { name: /Investment Vault/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Enter vault' }).click()
   await expect(page.getByRole('heading', { name: 'Conviction, made tangible.' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Section index' }).locator('li')).toHaveCount(11)
   const context = page.getByRole('slider', { name: 'Context section' })
@@ -33,7 +33,7 @@ test('entry, complete index, rotary keyboard control and reading navigation', as
 test('direct reading of every section and reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Explore the demonstration' }).click()
+  await page.getByRole('button', { name: 'Enter vault' }).click()
   for (const title of ['Introduction','Current Position','History & Evidence','Assets & Claims','Financial Requirements','Beobacht Alignment','Commercial Pipeline','Southern African Strategy','Financial Forecast','Investment Structures','Closing']) {
     await page.getByRole('button', { name: 'Open ' + title, exact: true }).click()
     await expect(page.locator('.reader-number')).toContainText(title)

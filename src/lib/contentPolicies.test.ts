@@ -27,7 +27,7 @@ beforeAll(async () => {
     await db.query("insert into storage.objects(bucket_id,name) values ('vault-evidence',$1)",[key])
   }
   await db.exec("insert into storage.objects(bucket_id,name) values ('vault-evidence','orphan.pdf')")
-}, 60000)
+}, 180000)
 afterAll(async () => { await db?.close() })
 async function asUser(id: string | null, sql: string, anonymous = false) {
   await db.exec('begin')

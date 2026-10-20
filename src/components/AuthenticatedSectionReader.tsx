@@ -3,9 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { VaultSection } from '../types'
 import type { ContentSectionId } from '../../content-migration/ingestion-schema'
 import { loadApprovedNarratives, PrivateNarrativeError } from '../lib/privateContent'
+import type { ReaderNavigation } from './ChapterNavigation'
 import { SectionReader, type NarrativeReaderState } from './SectionReader'
 
-export function AuthenticatedSectionReader({ client, accountId, section, onBack, onNext }: { client: SupabaseClient | null; accountId: string | undefined; section: VaultSection; onBack: () => void; onNext?: () => void }) {
+export function AuthenticatedSectionReader({ client, accountId, section, onBack, onNext, navigation }: { client: SupabaseClient | null; accountId: string | undefined; section: VaultSection; onBack: () => void; onNext?: () => void; navigation?: ReaderNavigation }) {
   const [revision, setRevision] = useState(0)
   const identity = `${accountId}:${section.id}:${revision}`
   const [loaded, setLoaded] = useState<{ identity: string; state: NarrativeReaderState } | null>(null)
@@ -25,5 +26,5 @@ export function AuthenticatedSectionReader({ client, accountId, section, onBack,
     return () => { cancelled = true }
   }, [client, accountId, section.id, identity])
   const state: NarrativeReaderState = loaded?.identity === identity ? loaded.state : { status: 'loading', records: [] }
-  return <SectionReader section={{ ...section, narrative: [], evidence: [], verification: 'PENDING' }} onBack={onBack} onNext={onNext} narrativeState={state} onRetry={() => setRevision(value => value + 1)} />
+  return <SectionReader section={{ ...section, narrative: [], evidence: [], verification: 'PENDING' }} onBack={onBack} onNext={onNext} navigation={navigation} narrativeState={state} onRetry={() => setRevision(value => value + 1)} />
 }

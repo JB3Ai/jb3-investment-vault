@@ -22,6 +22,50 @@ batches/
 approved-master.json
 presentation.json
 investor-presentation.pdf
+*.pdf
 master/
 financials/
 master-intake.json
+
+# Owner-provided evidence PDFs: retain only in external private intake
+/docs/URGENT_APPLICATION_2025.07.28.11.45.pdf
+/docs/Master_Litigation_Dossier_Blackburn.pdf
+/docs/dd_kula.pdf
+/docs/phase2_assets_and_githubauditV2.pdf
+/docs/Jonathan_Blackburn_Premium_Resume.pdf
+
+# Confidential evidence thumbnails
+/docs/audit.png
+/docs/GTR3.png
+/docs/house.png
+/docs/kidscustody.png
+/docs/kula.png
+/docs/resume.png
+
+# Private brochure source PDFs - originals retained locally
+/docs/Cyber-Noir Music Console Magazine Cover.pdf
+/docs/Cyber-Noir Music Console Magazine-combined.pdf
+/docs/Dual-Layer Intelligence for Eagle StarXJB³Ai-compressed.pdf
+/docs/Global Satellite Overlay The Sentinel Eye-compressed.pdf
+/docs/IsikoloAi for learners-compressed.pdf
+/docs/JB3Ai_Super_Agent_DASH.pdf
+/docs/JB³Ai Forensic Intelligence Systems OverviewV2-compressed.pdf
+/docs/JB³Ai Investment Deck Intelligence in Motion-compressed.pdf
+/docs/OS³ Core Platform Briefings-compressed.pdf
+/docs/OS³ DUKEBOX LONDON CUTSHEET.pdf
+/docs/OS³ NewsRoomAi CUTSHEET.pdf
+/docs/Sovereign VOICEGRID V2 Infrastructure ManualF1.pdf
+
+/docs/SSG_FINAL_DRAFT.pdf
+/docs/prd_app_kidnapv2.pdf
+/docs/Exec Deck SNG Grant Thornton.pdf
+/docs/Exec Deck (SNG Grant Thornton) (Presentation).pdf
+
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
+*.ods
+JB3_Bruce_Vault_Master_Content*.md
+/docs/compound.png
+debug.log

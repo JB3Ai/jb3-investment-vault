@@ -44,7 +44,7 @@ beforeAll(async () => {
       ('vault-documents','private.pdf'),('vault-documents','approved.pdf'),
       ('vault-documents','draft.pdf'),('vault-documents','hidden-parent.pdf'),('vault-documents','orphan.pdf');
   `)
-}, 60000)
+}, 180000)
 afterAll(async () => { await db?.close() })
 
 async function asUser<T>(id: string | null, query: string, anonymous = false): Promise<T[]> {

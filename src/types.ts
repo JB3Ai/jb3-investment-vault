@@ -7,7 +7,7 @@ export interface Evidence {
   status: Verification
   source: string | null
 }
-export interface VaultImage { id: string; caption: string; alt: string; url: string | null }
+export interface VaultImage { id: string; caption: string; alt: string; url: string | null; originalFilename?: string; sha256?: string }
 export interface VaultDocument {
   id: string
   title: string

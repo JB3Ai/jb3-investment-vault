@@ -1,10 +1,13 @@
 import { test, expect, type Page } from '@playwright/test'
+import { createDemoPdf } from '../src/lib/demoPdf'
 
 const accountId = '00000000-0000-4000-8000-000000000001'
 const body = 'Synthetic approved fixture only.\n\n  Preserve this paragraph.\n<script>window.fixtureExecuted=true</script>'
 const pendingResponses = new WeakMap<Page, () => void>()
 test.afterEach(({ page }) => { pendingResponses.get(page)?.() })
-async function setup(page: Page, options: { granted?: boolean; released?: boolean; empty?: boolean; delayed?: boolean; financialSection?: boolean } = {}) {
+async function setup(page: Page, options: { granted?: boolean; released?: boolean; empty?: boolean; delayed?: boolean; financialSection?: boolean; documents?: boolean } = {}) {
+  // Intro presentation state never substitutes for fixture authentication.
+  await page.addInitScript(() => sessionStorage.setItem('vaultLandingShown', 'true'))
   let releaseResponse: (() => void) | undefined
   const waiting = new Promise<void>(resolve => { releaseResponse = resolve })
   pendingResponses.set(page, () => releaseResponse!())
@@ -24,6 +27,7 @@ async function setup(page: Page, options: { granted?: boolean; released?: boolea
     else if (url.pathname.endsWith('/vault_settings')) response = { access_enabled: true }
     else if (url.pathname.endsWith('/vault_content_settings')) response = { access_enabled: options.released !== false }
     else if (url.pathname.endsWith('/vault_content_grants')) response = options.granted === false ? null : { classification: 'BRUCE_PRIVATE' }
+    else if (url.pathname.endsWith('/vault_documents')) response = options.documents ? [{ id: '11111111-1111-4111-8111-111111111111', title: 'Synthetic protected PDF', section_id: sectionId, disclosure: 'PRIVATE', verification: 'PENDING', storage_path: 'synthetic/not-a-browser-selector.pdf' }] : []
     else if (url.pathname.endsWith('/vault_sections')) response = [{ id: sectionId, number: options.financialSection ? 5 : 1, title: sectionTitle, subtitle: 'Synthetic reader fixture.', overview: 'Synthetic section metadata only.', disclosure: 'PRIVATE', verification: 'PENDING', updated_at: '2026-10-15', narrative: [{ heading: 'Legacy heading', body: 'Legacy narrative must stay hidden.' }], evidence: [], images: [], documents: [] }]
     else if (url.pathname.endsWith('/vault_content_records')) {
       recordRequests += 1
@@ -85,4 +89,66 @@ test('pending narrative response cannot reappear after sign-out', async ({ page 
   fixture.release()
   await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Approved synthetic narrative' })).toHaveCount(0)
+})
+
+test('protected PDF uses same-origin bearer transport and retains the existing viewer', async ({ page }) => {
+  let gatewayCalls = 0, storageCalls = 0
+  page.on('request', request => { if (request.url().includes('/storage/v1/')) storageCalls++ })
+  await page.route('**/api/vault/documents/*', async route => {
+    gatewayCalls++
+    expect(new URL(route.request().url()).search).toBe('')
+    expect(route.request().headers().authorization).toMatch(/^Bearer /)
+    await route.fulfill({ status: 200, headers: { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' }, body: Buffer.from(createDemoPdf()) })
+  })
+  await setup(page, { documents: true })
+  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.getByRole('button', { name: /Synthetic protected PDF/ }).click()
+  await expect(page.locator('.react-pdf__Page__canvas')).toBeVisible({ timeout: 45000 })
+  expect(gatewayCalls).toBe(1); expect(storageCalls).toBe(0)
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.locator('.react-pdf__Page__canvas')).toHaveCount(0)
+})
+
+test('protected PDF access denial does not fall back to a signed Storage link', async ({ page }) => {
+  await page.route('**/api/vault/documents/*', route => route.fulfill({ status: 403, headers: { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' } }))
+  await setup(page, { documents: true })
+  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.getByRole('button', { name: /Synthetic protected PDF/ }).click()
+  await expect(page.getByRole('alert')).toContainText('Your access may have changed')
+  await expect(page.locator('.react-pdf__Page__canvas')).toHaveCount(0)
+})
+
+test('a pending protected PDF cannot appear after sign-out', async ({ page }) => {
+  let release!: () => void, requested = false
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  pendingResponses.set(page, () => release())
+  await page.route('**/api/vault/documents/*', async route => {
+    requested = true
+    await waiting
+    await route.fulfill({ status: 200, headers: { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' }, body: Buffer.from(createDemoPdf()) }).catch(() => {})
+  })
+  await setup(page, { documents: true })
+  pendingResponses.set(page, () => release())
+  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.getByRole('button', { name: /Synthetic protected PDF/ }).click()
+  await expect.poll(() => requested).toBe(true)
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  release()
+  await expect(page.getByRole('heading', { name: 'For the invited.' })).toBeVisible()
+  await expect(page.locator('.react-pdf__Page__canvas')).toHaveCount(0)
+})
+
+
+test('local API fails closed over HTTP without exposing the SPA or server credentials', async ({ request }) => {
+  const endpoint = '/api/vault/assets/11111111-1111-4111-8111-111111111111'
+  const anonymous = await request.get(endpoint)
+  expect(anonymous.status()).toBe(401)
+  expect(anonymous.headers()['cache-control']).toBe('private, no-store, max-age=0, must-revalidate')
+  expect(await anonymous.text()).toBe('')
+  // This project uses a deliberately incorrect, local-only Supabase URL fixture.
+  const unconfigured = await request.get(endpoint, { headers: { Authorization: 'Bearer synthetic-loopback-only' } })
+  expect(unconfigured.status()).toBe(503); expect(await unconfigured.text()).toBe('')
+  const invalid = await request.get(endpoint + '?bucket=media&path=arbitrary')
+  expect(invalid.status()).toBe(404); expect(await invalid.text()).toBe('')
 })

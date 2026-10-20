@@ -1,8 +1,15 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "jb3-private-investment-vault",
+  "account_id": "18ab41342b712e6d2a83057299705832",
+  "workers_dev": true,
+  "preview_urls": false,
+  "cache": { "enabled": false, "cross_version_cache": false },
+  "main": "server/worker.ts",
   "compatibility_date": "2026-10-13",
   "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/vault/*"],
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   },

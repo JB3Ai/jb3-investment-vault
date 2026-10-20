@@ -1,3 +1,4 @@
+import {presentationView} from '../src/lib/presentationCopy.ts'
 import { parseManifest, type ContentManifest, type ContentRecord } from './ingestion-schema.ts'
 
 /** Private data contract only. Never import a populated document into frontend code. */
@@ -85,7 +86,7 @@ export function canonicalPresentation(input: ApprovedMaster) {
 const escape = (value: unknown) => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 /** Text-only evidence appendix: originals remain separate authenticated downloads. */
 export function masterPrintHtml(master: ApprovedMaster) {
-  const view = canonicalPresentation(master)
+  const view = presentationView(canonicalPresentation(master))
   const render = (r: ContentRecord) => `<article>${Object.entries(r.payload).map(([key, value]) => `<div><small>${escape(key)}</small><p>${escape(value ?? 'Not supplied')}</p></div>`).join('')}<footer>${escape(JSON.stringify({ id: r.id, classification: r.classification, verification: r.verification, approval: r.approval, provenance: r.provenance, file: r.file }))}</footer></article>`
   const schedules = Object.entries(view.financialSchedules).map(([name, rows]) => `<section><h2>${name === 'personal' ? 'Personal' : 'Business'} financial schedule</h2>${rows.length ? rows.map(row => `<h3>${escape(row.display)}</h3>${render(row.record)}`).join('') : '<p>No approved figures supplied.</p>'}</section>`).join('')
   const fx = view.exchangeRate

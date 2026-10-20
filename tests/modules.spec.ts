@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.getByRole('button', { name: 'Explore the demonstration' }).click() })
+test.beforeEach(async ({ page }) => { await page.goto('/'); await page.getByRole('button', { name: 'Enter vault' }).click() })
 
 test('timeline, gallery and structure comparison respond', async ({ page }) => {
   await page.getByRole('button', { name: 'Open History & Evidence', exact: true }).click()
@@ -51,7 +51,7 @@ test('console fits viewport and captures visual evidence', async ({ page }, test
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(page.locator('.oled-panel')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.screenshot({ path: 'docs/console-' + testInfo.project.name + '.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('console-' + testInfo.project.name + '.png'), fullPage: true })
 })
 test('rotary pointer input advances selection', async ({ page }) => {
   const dial = page.getByRole('slider', { name: 'Context section' })
