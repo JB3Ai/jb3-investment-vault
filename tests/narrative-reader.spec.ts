@@ -58,12 +58,12 @@ async function setup(page: Page, options: { granted?: boolean; released?: boolea
 
 test('approved narratives load with exact paragraphs, provenance and no asset modules', async ({ page }, testInfo) => {
   const fixture = await setup(page, { delayed: true, financialSection: true })
-  await expect(page.getByRole('status')).toContainText('Checking approved narrative access')
+  await expect(page.getByRole('status').filter({hasText:'Checking approved narrative access'})).toContainText('Checking approved narrative access')
   await expect(page.getByText('Legacy narrative must stay hidden.')).toHaveCount(0)
   fixture.release()
   await expect(page.getByRole('heading', { name: 'Approved synthetic narrative' })).toBeVisible()
-  expect(await page.locator('.narrative p').textContent()).toBe(body)
-  await expect(page.locator('.narrative p')).toHaveCSS('white-space', 'pre-wrap')
+  expect(await page.locator('.narrative p').allTextContents()).toEqual(body.split('\n\n').map(paragraph=>paragraph.trim().replace(/\n/g,' ')))
+  await expect(page.locator('.narrative p').first()).toHaveCSS('white-space', 'normal')
   await expect(page.locator('.evidence-aside')).toContainText('BRUCE_PRIVATE / approved / reported')
   await expect(page.locator('.evidence-aside')).toContainText('synthetic-source.md')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

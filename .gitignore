@@ -69,3 +69,12 @@ master-intake.json
 JB3_Bruce_Vault_Master_Content*.md
 /docs/compound.png
 debug.log
+
+/docs/3MICORE DOSSIER DRAFT - Copy.pdf
+
+/docs/07_server_upgrade.pdf
+
+/docs/groupphont.png
+
+# Local owner intake helper with source-specific review notes.
+/scripts/register-supporting-pdfs.mjs

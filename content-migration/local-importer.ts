@@ -24,6 +24,10 @@ function signature(bytes: Buffer, mime: string) {
   if (mime === 'image/jpeg') return bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
   return bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP'
 }
+/** Review catalogues cannot be staged. Actual export batches retain the original limits. */
+export function assertPrivateFileLimits(size:number,total:number,reviewCatalogue=false) {
+  if(size<1||size>25*1024*1024||total>(reviewCatalogue?256:100)*1024*1024)throw new Error('Private file/catalogue or export batch size limit exceeded')
+}
 export async function validateLocal(rootInput: string, manifestName: string) {
   const root = await privateRoot(rootInput)
   const filename = await privateFile(root, manifestName)
@@ -40,7 +44,7 @@ export async function validateLocal(rootInput: string, manifestName: string) {
     const input = await privateFile(root, record.file.relativePath)
     const size = (await stat(input)).size
     total += size
-    if (size < 1 || size > 26214400 || total > 104857600) throw new Error('File/batch size limit exceeded (25/100 MiB)')
+    assertPrivateFileLimits(size,total,intake!==null)
     const bytes = await readFile(input)
     if (createHash('sha256').update(bytes).digest('hex') !== record.file.sha256.toLowerCase()) throw new Error('Source checksum mismatch; review the changed source')
     if (!signature(bytes, record.file.mimeType)) throw new Error('Source signature does not match declared media type')

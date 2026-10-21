@@ -1,0 +1,10 @@
+import {it,expect} from 'vitest'
+import {presentationVisuals,privateSourcePath} from './presentationScreening'
+import type {ContentRecord} from '../content-migration/ingestion-schema'
+const record:ContentRecord={id:'00000000-0000-4000-8000-000000000001',kind:'photograph',classification:'BRUCE_PRIVATE',verification:'reported',approval:'draft',provenance:{originalFilename:'synthetic.png',sourceDate:null,citation:'Synthetic fixture',sourceReference:'Synthetic',reviewedBy:null,reviewedOn:null,conflictNote:null},payload:{caption:'Synthetic fixture',alt:'Synthetic fixture'},file:{relativePath:'sources/synthetic.png',sha256:'a'.repeat(64),mimeType:'image/png'}}
+const visual={sectionId:'southern-african-strategy',record},approvals={['a'.repeat(64)]:{scope:'public-presentation-visual'}}
+it('withholds every image without exact publication approval',()=>{expect(presentationVisuals([visual],{})).toEqual([]);expect(presentationVisuals(undefined,approvals)).toEqual([]);expect(presentationVisuals([visual],{['a'.repeat(64)]:{scope:'public-presentation-download'}})).toEqual([])})
+it('permits an explicitly approved copy while preserving source draft status',()=>{expect(presentationVisuals([visual],approvals)).toEqual([visual]);expect(record.approval).toBe('draft')})
+it('rejects restricted, rejected and altered source records',()=>{for(const changed of [{classification:'LEGAL_RESTRICTED' as const},{classification:'COMMERCIAL' as const},{approval:'rejected' as const},{file:{...record.file!,sha256:'b'.repeat(64)}},{file:null}])expect(presentationVisuals([{...visual,record:{...record,...changed}}],approvals)).toEqual([])})
+
+it('withholds Windows source paths while preserving original public video references',()=>{for(const value of ['C:/Users/synthetic/source.png','Original source C:/Users/synthetic/source.png',String.raw`C:\Users\synthetic\source.png`,String.raw`\\Users\synthetic\source.png`])expect(privateSourcePath(value)).toBe(true);for(const value of ['https://youtu.be/iZ-b4fi2mUk','https://www.youtube.com/watch?v=VOLItSSkWQM','Source: https://example.test/original'])expect(privateSourcePath(value)).toBe(false)})

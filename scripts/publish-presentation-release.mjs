@@ -19,8 +19,10 @@ if(namespace&&namespace.id!==receipt?.namespaceId)throw Error('Unowned existing 
 if(!namespace){namespace=await api('/accounts/'+account+'/storage/kv/namespaces','POST',{title});await fs.mkdir('tmp',{recursive:true});await fs.writeFile('tmp/presentation-publication.json',JSON.stringify({namespaceId:namespace.id,title,account,worker}))}
 const content=JSON.parse(await fs.readFile(ledger.content,'utf8'))
 if(content.data.documents.some(d=>d.classification==='LEGAL_RESTRICTED'))throw Error('Restricted content cannot be published')
+if(content.data.evidenceReviews?.some(review=>review.metadata['publication.scope']==='loopback-owner-review-only'))throw Error('Loopback owner review content cannot be published')
 const serverProposal=Object.values(content.assets).find(asset=>asset.filename==='07_server_upgrade.pdf')
 if(serverProposal&&ledger.approval?.files?.[serverProposal.sha256]?.scope!=='public-presentation-download')throw Error('Explicit server proposal publication approval required')
+for(const {record} of content.data.sectionVisuals??[]){const asset=content.assets[record.id];if(record.classification!=='BRUCE_PRIVATE'||record.approval==='rejected'||!asset||asset.sha256!==record.file?.sha256||ledger.approval?.files?.[asset.sha256]?.scope!=='public-presentation-visual')throw Error('Unapproved presentation visual cannot be published')}
 const entries=[]
 for(const upload of ledger.uploads){const b=await fs.readFile(upload.file);if(createHash('sha256').update(b).digest('hex')!==upload.sha256)throw Error('Prepared file changed');entries.push({key:upload.key,value:b.toString('base64'),base64:true})}
 // Assets first, versioned index last. Incomplete copies cannot become the selected release.

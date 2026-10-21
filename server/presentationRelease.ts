@@ -1,3 +1,5 @@
+import {portableCashFlowWorkbook} from '../src/lib/cashFlowWorkbook'
+import {validCashFlow} from '../src/lib/cashFlow'
 import { presentationWorkbook, presentationPdf } from './presentationExports'
 import { validExchangeRate } from '../src/lib/financialSchedules'
 import { validSustainable, emptySustainable } from '../src/lib/financialScenarios'
@@ -16,13 +18,13 @@ export async function presentationRelease(request:Request, env:PresentationEnv):
  const reply=(body:BodyInit|null,status:number,extra:Record<string,string>={})=>new Response(body,{status,headers:{...headers,...extra}})
  try{
   const url=new URL(request.url),path=url.pathname.replace(/^\/api\/vault\/presentation\//,'')
-  if(url.search || !['content','financial-export','master-pdf'].includes(path)&&!/^assets\/[0-9a-f-]{36}$/.test(path))return reply(null,404)
+  if(url.search || !['content','financial-export','master-pdf','financial-model-export'].includes(path)&&!/^assets\/[0-9a-f-]{36}$/.test(path))return reply(null,404)
   if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)return reply(null,403)
   if(!env.VAULT_PRESENTATION || !/^presentation-[a-z0-9-]+$/.test(env.VAULT_PRESENTATION_RELEASE??''))return reply(null,503)
   const raw=await env.VAULT_PRESENTATION.get(env.VAULT_PRESENTATION_RELEASE+'/content','text')
   if(!raw)return reply(null,503)
   const release=JSON.parse(raw) as Release
-  if(release.data.documents.some(r=>r.classification==='LEGAL_RESTRICTED'))return reply(null,503)
+  if(release.data.documents.some(r=>r.classification==='LEGAL_RESTRICTED')||release.data.evidenceReviews?.some(review=>review.metadata['publication.scope']==='loopback-owner-review-only'))return reply(null,503)
   if(path==='content'){
    if(request.method!=='GET')return reply(null,405)
    return reply(JSON.stringify(release.data),200,{'Content-Type':'application/json'})
@@ -40,11 +42,16 @@ export async function presentationRelease(request:Request, env:PresentationEnv):
    return reply(request.method==='HEAD'?null:data,200,{'Content-Type':asset.mime,'Content-Length':String(data.byteLength),'Content-Disposition':'inline; filename="'+asset.filename.replace(/[^a-zA-Z0-9._ -]/g,'_')+'"'})
   }
   if(request.method!=='POST' || request.headers.get('content-type')!=='application/json')return reply(null,405)
-  const text=await request.text();if(text.length>2048)return reply(null,400)
+  const text=await request.text();if(text.length>(path==='financial-model-export'||path==='master-pdf'?16384:2048))return reply(null,400)
   const options=JSON.parse(text)
-  if(!options || !['combined','personal','business'].includes(options.scope)||!validExchangeRate(options.zarPerGbp)||Object.keys(options).some(k=>!['scope','zarPerGbp','scenario'].includes(k)))return reply(null,400)
+  if(path==='financial-model-export'){
+   if(!options||Object.keys(options).sort().join(',')!=='input,zarPerGbp'||!validExchangeRate(options.zarPerGbp))return reply(null,400)
+   const bytes=portableCashFlowWorkbook(release.data.finances,validCashFlow(options.input),options.zarPerGbp)
+   return reply(bytes as BodyInit,200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="JB3-financial-model.xlsx"'})
+  }
+  if(!options || !['combined','personal','business'].includes(options.scope)||!validExchangeRate(options.zarPerGbp)||Object.keys(options).some(k=>!['scope','zarPerGbp','scenario',...(path==='master-pdf'?['cashFlow']:[])].includes(k)))return reply(null,400)
   const scenario=options.scenario?validSustainable(options.scenario):emptySustainable
-  const bytes=path==='financial-export'?presentationWorkbook(release.data.finances,options.scope,options.zarPerGbp,scenario):await presentationPdf(release.data,options.zarPerGbp,scenario)
+  const bytes=path==='financial-export'?presentationWorkbook(release.data.finances,options.scope,options.zarPerGbp,scenario):await presentationPdf(release.data,options.zarPerGbp,scenario,undefined,options.cashFlow?validCashFlow(options.cashFlow):undefined)
   return reply(bytes as BodyInit,200,{'Content-Type':path==='financial-export'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf','Content-Disposition':'attachment; filename="JB3-'+(path==='financial-export'?options.scope+'-draft.xlsx':'investment-presentation.pdf')+'"'})
  }catch{return reply(null,400)}
 }

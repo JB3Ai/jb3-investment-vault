@@ -20,6 +20,7 @@ export interface FundingProposal {
   historicalRecordsSha256: string
   household: { essentialsMonthlyMinor: number; bufferMonthlyMinor: number; minimumMonthlyMinor: number; periods: string[]; inclusions?: string[] }
   business: { essentialMonthlyMinor: number; travelMonthlyMinMinor: number; travelMonthlyMaxMinor: number }
+  cashFlowScenarios?:{owner:string;recordedOn:string;source:{relativePath:string;originalFilename:string;sha256:string};entries:{recordId:string;label:string;amountMinor:number;earliestMonth:string|null;note:string}[]}
   rows: FundingRow[]
 }
 

@@ -20,7 +20,7 @@ pdfmetrics.registerFontFamily('Editorial',normal='Editorial',bold='EditorialBold
 pdfmetrics.registerFontFamily('EditorialBold',normal='EditorialBold',bold='EditorialBold',italic='EditorialBold',boldItalic='EditorialBold')
 ink=colors.HexColor('#242923'); amber=colors.HexColor('#b89b65'); muted=colors.HexColor('#66675e')
 styles={
- 'body':ParagraphStyle('body',fontName='Body',fontSize=11,leading=17,spaceAfter=9,textColor=ink,allowWidows=0,allowOrphans=0),
+ 'body':ParagraphStyle('body',fontName='Body',fontSize=11,leading=17.05,spaceAfter=7,textColor=ink,allowWidows=0,allowOrphans=0),
  'h1':ParagraphStyle('h1',fontName='Editorial',fontSize=24,leading=30,spaceAfter=18,keepWithNext=True,textColor=ink),
  'h2':ParagraphStyle('h2',fontName='EditorialBold',fontSize=15,leading=21,spaceBefore=12,spaceAfter=9,keepWithNext=True,textColor=ink),
  'small':ParagraphStyle('small',fontName='Body',fontSize=8,leading=11,spaceAfter=7,textColor=muted),
@@ -80,7 +80,14 @@ def title(value):
     counter+=1;item=p(value,'h1');item.toc_key='section-'+str(counter);item.toc_title=value;story.append(item)
 for index,section in enumerate(data['sections']):
     if index:story.append(PageBreak())
-    record=section['narrative'];title(record['payload']['heading']);story.extend(narrative(record['payload']['body']))
+    record=section['narrative'];title(record['payload']['heading'])
+    for block in section['narrativeBlocks']:
+        if block['type']=='paragraph':story.append(p(re.sub(r'(?<!  )\n',' ',block['body'])))
+        elif block['type']=='table':story.append(table(block['headers'],block['rows'],[(A4[0]-96)/len(block['headers'])]*len(block['headers'])))
+        elif block['type']=='heading':story.append(p(block['body'],'h2'))
+        elif block['type']=='rule':story.append(Spacer(1,6))
+        elif block['type']=='list':
+            for offset,item in enumerate(block['items']):story.append(p((str(block['start']+offset)+'. ' if block['ordered'] else '• ')+item.replace('\n',' ')))
     story.append(p('Narrative approval: '+record['approval']+' / account: '+record['classification']+' / verification: '+record['verification'],'small'))
     if index==2:
         story.append(PageBreak());title(data['laboratory']['title']+': draft evidence')
@@ -92,6 +99,14 @@ for index,section in enumerate(data['sections']):
             story.append(KeepTogether([p(label,'h2'),picture,Spacer(1,7),p(image['caption'],'small'),p('Original file: '+image['filename']+' / SHA-256 '+image['sha256'],'small')]))
         story.append(p('Original video evidence','h2'))
         for index,video in enumerate(data['laboratory']['videos']):story.append(p('Original video '+str(index+1)+' / BRUCE_PRIVATE / DRAFT\n'+video['url']+'\nTitles, dates, recording content and certification are not independently verified.','small'))
+    if index==3 and data.get('ownerAssetEstimates'):
+        estimates=data['ownerAssetEstimates']
+        story.append(p(estimates['briefing']['heading'],'h2'))
+        for paragraph in estimates['briefing']['paragraphs']:story.append(p(paragraph))
+        story.append(p(estimates['heading'],'h2'));story.append(p(estimates['subtitle'],'small'))
+        story.append(table(['Owner estimate','Low ZAR','High ZAR'],[[entry['label'],money(entry['lowMinor']),money(entry['highMinor'])] for entry in estimates['entries']],[245,125,129]))
+        story.append(p('Combined indicative range: '+money(sum(entry['lowMinor'] for entry in estimates['entries']))+' to '+money(sum(entry['highMinor'] for entry in estimates['entries']))))
+        story.append(p(estimates['combinedNote'],'small'));story.append(p(estimates['rangeNote'],'small'))
     if index==3 and data.get('hasAssetReview'):
         story.append(PageBreak());title('Assets & Potential Recoveries - draft owner review')
         story.append(p('All entries remain draft. No monetary valuation is inferred from repository activity. Disputed recoveries contribute ZAR 0 to the funding and repayment model until realised. This is a conservative assumption, not a verified asset balance.'))
@@ -106,7 +121,7 @@ for index,section in enumerate(data['sections']):
     if index==6 and data.get('commercial'):
         story.append(PageBreak());commercial=data['commercial']
         story.append(p('Commercial Capability & Opportunity Register','h2'))
-        story.append(p('Owner-confirmed positioning / draft supporting evidence. Uncontracted forecast contribution: '+money(commercial['forecastMinor'])+'. No verified customer payments or contracted revenue are asserted. Proposed amounts are not funding or repayment capacity.'))
+        story.append(p('Commercial opportunities are indicative and subject to agreement. No signed revenue commitments are assumed in the base funding model.'))
         for entry in commercial['entries']:
             story.append(p(entry['title'],'h2'));story.append(p(entry['categoryLabel'],'category'));story.append(p(entry['positioning']))
             for limit in entry['limitations']:story.append(p(limit,'small'))
@@ -119,6 +134,15 @@ for index,section in enumerate(data['sections']):
             for note in entry['missingEvidence']:story.append(p(note,'small'))
             for quote in entry['quotedValues']:story.append(p('Historical quoted / proposed value only: '+quote['currency']+' '+format(Decimal(str(quote['amountMinor']))/100,',.2f')+' / '+quote['citation']+' / excluded from revenue and funding.','small'))
         story.append(p('Owner clarification: '+commercial['owner']+' / '+commercial['recordedOn']+'. No full technical decks are embedded. Supporting files remain subject to separate classified access and owner approval.','small'))
+
+if data.get('cashFlow'):
+    model=data['cashFlow'];story.append(PageBreak());title('Five-Month Cash-Flow Model')
+    story.append(p('Illustrative working estimates. Subject to final reconciliation before investment.'))
+    labels=['Personal income','Business income','Total income','Household monthly OPEX','Business monthly OPEX','Personal once-offs','Business once-offs','Optional CAPEX','Total expenses','Net cash flow before funding','External funding injected','Opening cash balance','Closing cash balance','Outstanding funding requirement']
+    for month in model['rows']:
+        story.append(p(month['month'],'h2'))
+        story.append(table(['Cash flow','ZAR','GBP'],[[label,'Unresolved' if value is None else money(value),'Unresolved' if value is None else money(value,'GBP')] for label,value in zip(labels,month['values'])],[249,125,125]))
+    story.append(p('Selected unscheduled known costs: '+money(model['knownUnscheduled'])+'. These and unknown amounts are excluded from monthly balances. Period funding requirement is peak outstanding, not the sum of monthly deficits.','small'))
 
 story.append(PageBreak());title('Financial summary: provisional')
 finance=data['finances'];all_totals=finance['all'];scenario=finance['scenarios']

@@ -1,0 +1,1 @@
+declare const __VAULT_BUILD_REFERENCE__:string

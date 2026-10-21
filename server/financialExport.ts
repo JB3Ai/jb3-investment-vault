@@ -1,3 +1,4 @@
+import {validCashFlow,type CashFlowInput} from '../src/lib/cashFlow.ts'
 import {presentationText} from '../src/lib/presentationCopy.ts'
 import { applyFundingWorkbook } from './fundingWorkbook.ts'
 import { orderedFinancialRows, fundingSummary } from '../src/lib/fundingProposal.ts'
@@ -16,21 +17,21 @@ export async function workbookRuntime() {
   const resolve = createRequire(path.join(runtime, 'package.json'))
   return import(/* @vite-ignore */ pathToFileURL(resolve.resolve('@oai/artifact-tool')).href)
 }
-export function exportRequest(value: unknown): { scope: ExportScope; zarPerGbp: number; scenario?: SustainableInput } {
+export function exportRequest(value: unknown): { scope: ExportScope; zarPerGbp: number; scenario?: SustainableInput; cashFlow?:CashFlowInput } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid export request')
   const data = value as Record<string, unknown>
-  if (!['scope,zarPerGbp','scenario,scope,zarPerGbp'].includes(Object.keys(data).sort().join(',')) || !['combined', 'personal', 'business'].includes(String(data.scope)) || typeof data.zarPerGbp !== 'number' || !validExchangeRate(data.zarPerGbp)) throw new Error('Invalid export request')
-  return { scope: data.scope as ExportScope, zarPerGbp: data.zarPerGbp, ...(Object.hasOwn(data,'scenario')?{scenario:validSustainable(data.scenario)}:{}) }
+  if (!['scope,zarPerGbp','scenario,scope,zarPerGbp','cashFlow,scope,zarPerGbp','cashFlow,scenario,scope,zarPerGbp'].includes(Object.keys(data).sort().join(',')) || !['combined', 'personal', 'business'].includes(String(data.scope)) || typeof data.zarPerGbp !== 'number' || !validExchangeRate(data.zarPerGbp)) throw new Error('Invalid export request')
+  return { scope: data.scope as ExportScope, zarPerGbp: data.zarPerGbp, ...(Object.hasOwn(data,'scenario')?{scenario:validSustainable(data.scenario)}:{}),...(Object.hasOwn(data,'cashFlow')?{cashFlow:validCashFlow(data.cashFlow)}:{}) }
 }
 export async function readExportRequest(request: IncomingMessage) {
   if (request.headers['content-type'] !== 'application/json') throw new Error('JSON required')
   const chunks: Buffer[] = []; let size = 0
   for await (const chunk of request) {
     size += Buffer.byteLength(chunk)
-    if (size > 1024) throw new Error('Export request too large')
+    if (size > 16384) throw new Error('Export request too large')
     chunks.push(Buffer.from(chunk))
   }
-  return exportRequest(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+  const value=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(size>1024&&!value.cashFlow)throw Error('Export request too large');return exportRequest(value)
 }
 const literal = (value: unknown) => {
   const text = value === null || value === undefined ? 'Not supplied' : String(value)

@@ -1,3 +1,4 @@
+import {buildReference} from './server/buildReference.ts'
 import {presentationPreview} from './server/vitePresentation.ts'
 import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
@@ -12,6 +13,7 @@ export default defineConfig(({ command, mode }) => {
   const ownerReview = command === 'serve' && mode === 'private-local'
   if (ownerReview && !process.env.JB3_PRIVATE_CONTENT_ROOT) throw new Error('Set JB3_PRIVATE_CONTENT_ROOT to the external private-content folder')
   return {
+  define:{__VAULT_BUILD_REFERENCE__:JSON.stringify(command==='build'?buildReference(process.cwd()):'LOCAL')},
   plugins: [privateContentBoundary(process.cwd()), react(), tailwindcss(), ...(command==='serve' && mode==='presentation' && process.env.JB3_PRIVATE_CONTENT_ROOT ? [presentationPreview(process.env.JB3_PRIVATE_CONTENT_ROOT)] : []), ownerReview ? privateLocalReview(process.env.JB3_PRIVATE_CONTENT_ROOT!) : localDownloadGateway({
     SUPABASE_URL: env.VITE_SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY: env.VITE_SUPABASE_PUBLISHABLE_KEY,

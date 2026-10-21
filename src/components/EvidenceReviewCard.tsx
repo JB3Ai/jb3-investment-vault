@@ -9,7 +9,7 @@ import '../styles/evidence-review.css'
 
 export function EvidenceReviewCard({record,review,preview,actions}:{record:ContentRecord;review:EvidenceReview;preview?:ReactNode;actions?:ReactNode}) {
   record=presentationView(record);review=presentationView(review)
-  return <article className="evidence-review-card" data-evidence-record={record.id}>
+  return <article className="evidence-review-card" tabIndex={-1} data-evidence-record={record.id}>
     <div className="module-heading"><h3><FileText size={20}/>{record.payload.title}</h3><span className="metadata">{record.classification}</span></div>
     <p className="evidence-review-status">DRAFT EVIDENCE / OUTSTANDING VERIFICATION</p>
     {preview??<EvidencePreview title={String(record.payload.title)}/>}

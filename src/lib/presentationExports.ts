@@ -1,11 +1,15 @@
+import {calculateCashFlow,cashFlowRowLabels,cashFlowNotice,type CashFlowInput} from './cashFlow.ts'
+import {presentationView} from './presentationCopy.ts'
+import {narrativeBlocks} from './narrativePresentation.ts'
+import {ownerEstimateRange} from './assetReview.ts'
 import { zipSync, strToU8 } from 'fflate'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import { financialNote, sourceMinor, totals, validExchangeRate, money, type FinancialData, type ExportScope } from './financialSchedules'
-import { fundingSummary } from './fundingProposal'
-import { financialScenarios, emptySustainable, type SustainableInput } from './financialScenarios'
-import type { LocalReview } from './localReview'
+import { financialNote, sourceMinor, totals, validExchangeRate, money, type FinancialData, type ExportScope } from './financialSchedules.ts'
+import { fundingSummary } from './fundingProposal.ts'
+import { financialScenarios, emptySustainable, type SustainableInput } from './financialScenarios.ts'
+import type { LocalReview } from './localReview.ts'
 const xml=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!))
-type Cell=string|number|null|{formula:string;value:number|null}
+export type Cell=string|number|null|{formula:string;value:number|null}
 const formula=(formula:string,value:number|null):Cell=>({formula,value})
 export function presentationWorkbook(data:FinancialData,scope:ExportScope,rate:number,scenario:SustainableInput){
  if(!validExchangeRate(rate))throw Error('Invalid exchange assumption')
@@ -23,37 +27,58 @@ export function presentationWorkbook(data:FinancialData,scope:ExportScope,rate:n
  const scoped={...data,personal:scope==='business'?[]:data.personal,business:scope==='personal'?[]:data.business},exportedScenario=scope==='business'?emptySustainable:scenario,s=financialScenarios(scoped,exportedScenario)
  sheets.push({name:'Budget scenarios',rows:[['Scenario','DRAFT / reviewer inputs'],['Minimum operating ZAR',s.minimumMinor/100],['Sustainable five-month ZAR',s.sustainableMinor===null?null:s.sustainableMinor/100],['Selected ZAR per GBP',rate],['Source assumptions',JSON.stringify(exportedScenario)]]})
  sheets.push({name:'Source notes',rows:sourceRows})
+ return encodeWorkbook(sheets)
+}
+export function encodeWorkbook(sheets:{name:string;rows:Cell[][]}[],styled=false){
  const files:Record<string,Uint8Array>={}
  function put(n:string,s:string){files[n]=strToU8(s)}
- put('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>')
+ put('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+(styled?'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>':'')+sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>')
  put('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
  put('xl/workbook.xml','<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>'<sheet name="'+xml(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets><calcPr fullCalcOnLoad="1"/></workbook>')
- put('xl/_rels/workbook.xml.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'</Relationships>')
+ put('xl/_rels/workbook.xml.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+(styled?'<Relationship Id="styles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>':'')+sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'</Relationships>')
  const column=(n:number)=>{let s='';for(n++;n;n=Math.floor((n-1)/26))s=String.fromCharCode(65+(n-1)%26)+s;return s}
  sheets.forEach((s,i)=>put('xl/worksheets/sheet'+(i+1)+'.xml','<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="48" customWidth="1"/><col min="2" max="9" width="24" customWidth="1"/></cols><sheetData>'+s.rows.map((row,r)=>'<row r="'+(r+1)+'">'+row.map((v,c)=>{const ref=column(c)+(r+1);return v===null?'<c r="'+ref+'"/>':typeof v==='number'?'<c r="'+ref+'"><v>'+v+'</v></c>':typeof v==='object'?'<c r="'+ref+'"><f>'+xml(v.formula)+'</f>'+(v.value===null?'':'<v>'+v.value+'</v>')+'</c>':'<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+xml(v)+'</t></is></c>'}).join('')+'</row>').join('')+'</sheetData></worksheet>'))
+ if(styled){put('xl/styles.xml','<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00;[Red](#,##0.00)"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8E3D5"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="4"><xf xfId="0"/><xf xfId="0" fontId="1" fillId="2" applyFill="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="164" applyNumberFormat="1"><alignment horizontal="right"/></xf></cellXfs></styleSheet>')
+  for(const [name,bytes]of Object.entries(files))if(name.startsWith('xl/worksheets/'))files[name]=strToU8(new TextDecoder().decode(bytes).replace(/<c r="([A-Z]+)([0-9]+)"/g,(_m,col,row)=>'<c r="'+col+row+'" s="'+(row==='1'?'1':col==='A'?'2':'3')+'"').replace('max="9"','max="12"'))
+ }
  return zipSync(files)
 }
-export async function presentationPdf(data:LocalReview,rate:number,scenario:SustainableInput,loadImage?:(id:string)=>Promise<Uint8Array>){
+export async function presentationPdf(data:LocalReview,rate:number,scenario:SustainableInput,loadImage?:(id:string)=>Promise<Uint8Array>,cashFlow?:CashFlowInput){
+ data=presentationView(data)
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.TimesRoman),bold=await pdf.embedFont(StandardFonts.TimesRomanBold)
  pdf.setTitle('JB³ Private Investment Presentation');pdf.setAuthor('Jonathan Blackburn')
  let page=pdf.addPage([595.28,841.89]),y=780
  const safe=(text:string)=>Array.from(text).map(c=>{try{font.encodeText(c);return c}catch{return ' '}}).join('')
- function line(text:string,size=11,heading=false){if(y<58){page=pdf.addPage([595.28,841.89]);y=780}page.drawText(safe(text),{x:52,y,size,font:heading?bold:font,color:heading?rgb(.28,.24,.16):rgb(.12,.12,.11)});y-=size*1.45}
+ function line(text:string,size=11,heading=false){if(y<58){page=pdf.addPage([595.28,841.89]);y=780}page.drawText(safe(text),{x:52,y,size,font:heading?bold:font,color:heading?rgb(.28,.24,.16):rgb(.12,.12,.11)});y-=size*1.55}
  function paragraph(text:string,size=11,heading=false){for(const original of text.replace(/\*\*/g,'').split('\n')){let row='';for(const word of original.split(/\s+/)){const next=(row?row+' ':'')+word;if(font.widthOfTextAtSize(safe(next),size)>490&&row){line(row,size,heading);row=word}else row=next}if(row)line(row,size,heading);else y-=8}y-=8}
+ function narrativeTable(headers:string[],rows:string[][]){
+  const width=490/headers.length
+  const wrap=(value:string)=>{const words=value.replace(/\*\*/g,'').split(/\s+/),lines:string[]=[];let row='';for(const word of words){const next=(row?row+' ':'')+word;if(font.widthOfTextAtSize(safe(next),9)>width-14&&row){lines.push(row);row=word}else row=next}if(row)lines.push(row);return lines}
+  const layout=(row:string[])=>{const cells=row.map(wrap);return{cells,height:Math.max(...cells.map(cell=>cell.length),1)*14+14}}
+  const draw=(row:ReturnType<typeof layout>,header:boolean)=>{row.cells.forEach((lines,column)=>{page.drawRectangle({x:52+column*width,y:y-row.height,width,height:row.height,borderWidth:.4,borderColor:rgb(.7,.66,.57),...(header?{color:rgb(.91,.89,.84)}:{})});lines.forEach((text,lineIndex)=>page.drawText(safe(text),{x:59+column*width,y:y-16-lineIndex*14,size:9,font:header?bold:font,color:rgb(.12,.12,.11)}))});y-=row.height}
+  const header=layout(headers)
+  if(y-header.height-(rows.length?layout(rows[0]).height:0)<58){page=pdf.addPage([595.28,841.89]);y=780}
+  draw(header,true)
+  for(const source of rows){const row=layout(source);if(y-row.height<58){page=pdf.addPage([595.28,841.89]);y=780;draw(header,true)}draw(row,false)}y-=10
+ }
+ function narrative(body:string){for(const block of narrativeBlocks(body)){if(block.type==='rule'){y-=6;continue}if(block.type==='heading'){paragraph(block.body,14,true);continue}if(block.type==='table'){narrativeTable(block.headers,block.rows);continue}if(block.type==='list'){block.items.forEach((item,i)=>paragraph((block.ordered?String(block.start+i)+'. ':'• ')+item.replace(/\n/g,' '),11));continue}paragraph(block.body.replace(/\n/g,' '),11)}}
  paragraph('JB³ PRIVATE INVESTMENT VAULT',18,true);paragraph('Prepared for Bruce Blackburn',12);paragraph('Temporary presentation copy. Draft figures and evidence retain their original status. Restricted and confidential supporting files are omitted.',10)
- async function laboratory(){if(!data.laboratory)return;paragraph(data.laboratory.title,16,true);for(const record of data.laboratory.records??[])if(typeof record.payload.body==='string')paragraph(record.payload.body);paragraph('Founder-provided display sequence. Dates, certification and independent chronology remain subject to verification. Photographs retain draft evidence status.',10)
+ async function laboratory(){if(!data.laboratory)return;paragraph(data.laboratory.title,16,true);for(const record of data.laboratory.records??[])if(typeof record.payload.body==='string')narrative(record.payload.body);paragraph('Founder-provided display sequence. Dates, certification and independent chronology remain subject to verification. Photographs retain draft evidence status.',10)
   for(const record of data.laboratory.photographs){
    if(loadImage){const image=await pdf.embedJpg(await loadImage(record.id));page=pdf.addPage([595.28,841.89]);y=780;paragraph(data.laboratory.title,14,true);const size=image.scaleToFit(490,590);page.drawImage(image,{x:52+(490-size.width)/2,y:y-size.height,width:size.width,height:size.height});y-=size.height+18}
    paragraph(String(record.payload.caption),10);paragraph('Source: '+record.provenance.originalFilename+' / '+record.approval+' / '+record.verification,8)
   }
  }
- for(const s of data.sections){paragraph(s.narrative.payload.heading,16,true);paragraph(s.narrative.payload.body);if(s.id==='history-evidence')await laboratory()}
+ for(const s of data.sections){paragraph(s.narrative.payload.heading,16,true);narrative(s.narrative.payload.body);if(s.id==='history-evidence')await laboratory()
+  if(s.id==='assets-claims'&&data.assets?.ownerEstimates){const estimates=data.assets.ownerEstimates,total=ownerEstimateRange(estimates);paragraph(estimates.briefing.heading,14,true);for(const body of estimates.briefing.paragraphs)paragraph(body);paragraph(estimates.heading,14,true);paragraph(estimates.subtitle,9);for(const entry of estimates.entries)paragraph(entry.label+': '+money(entry.lowMinor)+' to '+money(entry.highMinor)+' / '+entry.note,10);paragraph('Combined indicative range: '+money(total.lowMinor)+' to '+money(total.highMinor),11,true);paragraph(estimates.combinedNote,10);paragraph(estimates.rangeNote,9)}
+ }
 
  paragraph('Personal and business financial schedules',16,true);paragraph('ZAR primary. GBP = ZAR / '+rate+'. Editable illustrative assumption; unresolved values excluded, not zero. Draft estimates are not agreed obligations.',10)
  for(const name of ['personal','business'] as const){paragraph(name==='personal'?'Personal':'Business',13,true);for(const r of data.finances[name]){const n=typeof r.payload.amountMinor==='number'?r.payload.amountMinor:null;paragraph(String(r.payload.label)+': '+(n===null?'Unresolved':money(n)+' / '+money(Math.round(n/rate),'GBP'))+' ('+r.approval+')',10)}}
  const funding=fundingSummary(data.finances);if(funding)paragraph('Indicative core plus known one-offs: '+money(funding.knownRequirementsMinor)+' / '+money(Math.round(funding.knownRequirementsMinor/rate),'GBP')+'. Unknown, optional and conditional amounts remain excluded.',11,true)
- if(data.commercial){paragraph('Commercial capability & opportunity register',16,true);for(const entry of data.commercial.entries){paragraph(entry.title,12,true);paragraph(entry.positioning,10);for(const limitation of entry.limitations)paragraph(limitation,9)}paragraph('Uncontracted forecast pipeline revenue remains ZAR 0. Proposals and prototypes are not signed contracts or confirmed income.',10)}
+ if(data.commercial){paragraph('Commercial capability & opportunity register',16,true);for(const entry of data.commercial.entries){paragraph(entry.title,12,true);paragraph(entry.positioning,10);for(const limitation of entry.limitations)paragraph(limitation,9)}paragraph('Commercial opportunities are indicative and subject to agreement. No signed revenue commitments are assumed in the base funding model.',10)}
  if(data.documents.length){paragraph('Supporting brochures and documents',16,true);for(const record of data.documents){paragraph(String(record.payload.title),11,true);paragraph(record.provenance.originalFilename+' / '+record.approval+' / '+record.verification,9)}}
+ if(cashFlow){const model=calculateCashFlow(data.finances,cashFlow);paragraph('Five-Month Cash-Flow Model',16,true);paragraph(cashFlowNotice,10);for(const row of model.rows){paragraph(row.month,12,true);row.values.forEach((v,i)=>paragraph(cashFlowRowLabels[i]+': '+(v===null?'Unresolved':money(v)),10))}paragraph('Selected unscheduled known expenses: '+money(model.knownUnscheduled)+'. Monthly balances exclude these costs and unresolved amounts.',10)}
  const selected=financialScenarios(data.finances,scenario);paragraph('Budget scenarios',14,true);paragraph('Minimum operating baseline: '+money(selected.minimumMinor)+'. Sustainable scenario: '+(selected.sustainableMinor===null?'Owner inputs required':money(selected.sustainableMinor)+' / '+money(Math.round(selected.sustainableMinor/rate),'GBP'))+'. No speculative revenue is assumed.',10)
  for(const [i,p]of pdf.getPages().entries())p.drawText('JB³ / Bruce Blackburn / '+(i+1),{x:52,y:30,size:8,font,color:rgb(.4,.4,.4)})
  return pdf.save()

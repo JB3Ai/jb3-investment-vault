@@ -1,3 +1,4 @@
+import {BuildReference} from './BuildReference'
 import { ChevronRight, LockKeyhole, Volume2, VolumeX } from 'lucide-react'
 
 export function VaultEntry({ onEnter, onSkip, onMute, muted, mode }: { onEnter: () => void; onSkip: () => void; onMute: () => void; muted: boolean; mode: 'secure' | 'demo' | 'local' | 'presentation' }) {
@@ -10,6 +11,6 @@ export function VaultEntry({ onEnter, onSkip, onMute, muted, mode }: { onEnter: 
       <div className="landing-block landing-block--3"><p className="landing-text--secondary">All investment material is confidential.<br />Supporting evidence and financial schedules retain their recorded approval and verification status.</p><p className="landing-disclaimer">{mode === 'presentation' ? 'A temporary presentation for Bruce Blackburn. The PIN is an entry control, not secure authentication.' : mode === 'secure' ? 'An authorised account is required to access confidential content. This introduction does not grant access.' : mode === 'local' ? 'Prepared for a confidential conversation. Draft evidence and provisional figures remain clearly identified.' : 'Demonstration content only. No confidential materials are available in this mode.'}</p></div>
       <div className="landing-button-wrapper"><button className="landing-enter" onClick={onEnter}>Enter vault <LockKeyhole size={15} /></button></div>
     </section>
-    <div className="landing-footer" aria-hidden="true"><span /><p>Private by intention.</p></div>
+    <div className="landing-footer"><span aria-hidden="true"/><p>Private by intention. <BuildReference/></p></div>
   </main>
 }

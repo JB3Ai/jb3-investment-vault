@@ -1,3 +1,4 @@
+import {presentationVisuals,privateSourcePath} from '../server/presentationScreening.ts'
 // Deployment projection of the established intake. Originals and approvals are never mutated.
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -11,6 +12,8 @@ const root=process.env.JB3_PRIVATE_CONTENT_ROOT
 if(!root)throw Error('External intake root required')
 const {data:original,records}=await loadLocalReview(root),data=structuredClone(original),out=path.join(root,'presentation-release')
 await fs.mkdir(out,{recursive:true});const excluded=[],assets={},uploads=[]
+let publicationApprovals={}
+try{publicationApprovals=JSON.parse(await fs.readFile(path.join(out,'deployment.private.json'),'utf8')).approval?.files??{}}catch{}
 const hash=b=>createHash('sha256').update(b).digest('hex')
 let release='presentation-20261020-'+hash(Buffer.from(JSON.stringify(original.sections))).slice(0,12)
 const family=/\b(children|daughters?|girls|custody|school(?:ing)?|therapy|counselling|medical|minor child|parenting)\b/i
@@ -32,7 +35,7 @@ for(const s of data.sections)s.narrative.payload.body=s.narrative.payload.body.s
 function scrub(value,key=''){
  if(typeof value==='string'){
   if(key==='reconciliationNote'){try{return JSON.stringify(scrub(JSON.parse(value),'financial-note'))}catch{throw Error('Financial notes invalid')}}
-  if(/relativePath|originalPath|sourcePath/i.test(key)||/[A-Za-z]:[\\/]|\\\\Users\\/.test(value))return '[Private source path withheld]'
+  if(/relativePath|originalPath|sourcePath/i.test(key)||privateSourcePath(value))return '[Private source path withheld]'
   if(sensitive(value))return '[Personal detail withheld]'
   return value
  }
@@ -54,14 +57,15 @@ for(const spec of clientSpecs){const record=data.documents.find(r=>spec.match(r.
 const documentNotices=[]
 for(const spec of [
  {title:'KULA',filename:'dd_kula.pdf',section:'assets-claims'},
- {title:'Micore',filename:null,section:'assets-claims'},
+ {title:'Micore',filename:'3MICORE DOSSIER DRAFT - Copy.pdf',section:'assets-claims'},
  {title:"Children's Custody",filename:'URGENT_APPLICATION_2025.07.28.11.45.pdf',section:'current-position'},
  {title:'Blackburn House',filename:'Master_Litigation_Dossier_Blackburn.pdf',section:'assets-claims'},
 ]){const record=spec.filename?original.documents.find(r=>r.provenance.originalFilename===spec.filename):null;documentNotices.push({recordId:record?.id??null,title:spec.title,association:spec.title,filename:record?.provenance.originalFilename??null,classification:'LEGAL_RESTRICTED',sectionIds:[spec.section],collection:'legal',status:record?'Draft / unpublished':'Source missing',reason:record?'Sensitive legal and third-party material. Explicit publication review and appropriate authorisation are required before original bytes can be served.':'No separate canonical Micore PDF was found in the existing intake. The Blackburn house dossier is a different matter and has not been substituted.'})}
 const allowed=new Set(original.localDocumentPreviewIds??[]),documents=[]
 for(const record of original.documents){
  let reason=null
- if(record.classification==='LEGAL_RESTRICTED')reason='Restricted legal dossier'
+ if(original.evidenceReviews?.find(review=>review.recordId===record.id)?.metadata['publication.scope']==='loopback-owner-review-only')reason='Local owner review only; no public publication approval'
+ else if(record.classification==='LEGAL_RESTRICTED')reason='Restricted legal dossier'
  else if(/Cyber-Noir Music Console Magazine/i.test(record.provenance.originalFilename))reason='Identifiable family name on cover; publication held for review'
  else if(!allowed.has(record.id))reason='No existing document viewing approval'
  else if(!commercialDocumentVisible(brochureDocument(record,original.evidenceReviews?.find(r=>r.recordId===record.id)?.metadata)))reason='Excluded from featured presentation'
@@ -77,6 +81,8 @@ data.thumbnailPreviews=(data.thumbnailPreviews??[]).filter(r=>visible.has(r.pare
 for(const thumbnail of data.thumbnailPreviews){const record=records.get(thumbnail.recordId);if(record)await add(record,'image/png')}
 // Only the established laboratory mapping, never unrelated evidence imagery.
 for(const photo of data.laboratory.photographs)await add(photo,photo.file.mimeType??'image/jpeg')
+data.sectionVisuals=presentationVisuals(data.sectionVisuals,publicationApprovals)
+for(const {record} of data.sectionVisuals)await add(record,record.file.mimeType)
 if(data.commercial)for(const entry of data.commercial.entries){entry.sourceDocuments=entry.sourceDocuments.filter(s=>visible.has(s.recordId));entry.quotedValues=entry.quotedValues.filter(s=>visible.has(s.sourceDocumentId))}
 if(data.assets)data.assets.entries=data.assets.entries.filter(entry=>entry.classification!=='LEGAL_RESTRICTED')
 for(const record of [...data.finances.personal,...data.finances.business]){
@@ -93,8 +99,6 @@ data.finances.findings=data.finances.findings.map(f=>family.test(f.source+' '+f.
 const clean=scrub(data)
 const text=JSON.stringify(clean)
 if(clean.documents.some(r=>r.classification==='LEGAL_RESTRICTED')||/sb_secret_[A-Za-z0-9_-]{15,}|sbp_[A-Za-z0-9_-]{15,}|PRIVATE KEY/.test(text))throw Error('Release privacy boundary failed')
-let publicationApprovals={}
-try{publicationApprovals=JSON.parse(await fs.readFile(path.join(out,'deployment.private.json'),'utf8')).approval?.files??{}}catch{}
 const initialRelease=release
 release='presentation-20261021-'+hash(Buffer.from(JSON.stringify({data:clean,assets:Object.entries(assets).map(([id,a])=>[id,a.sha256])}))).slice(0,16)
 for(const asset of Object.values(assets))asset.key=asset.key.replace(initialRelease+'/',release+'/')

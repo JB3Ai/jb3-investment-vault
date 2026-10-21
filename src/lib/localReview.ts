@@ -33,6 +33,7 @@ export interface DocumentNotice {
   reason: string
 }
 export interface LocalReview {
+  sectionVisuals?: {sectionId: string; record: ContentRecord}[]
   documentNotices?: DocumentNotice[]
   sections: { id: string; narrative: ApprovedNarrative }[]
   laboratory: { title: string; records: ContentRecord[]; photographs: ContentRecord[]; review?: LaboratoryEvidenceReview | null }
@@ -54,6 +55,11 @@ export const presentationReleaseMode = import.meta.env.VITE_VAULT_MODE === 'pres
 export const localReviewMode = presentationReleaseMode || import.meta.env.DEV && import.meta.env.MODE === 'private-local'
 export async function localReviewFetch(resource: string, signal?: AbortSignal, init: RequestInit = {}): Promise<Response> {
   if (!localReviewMode) throw new Error('Local owner review is unavailable')
+  if(presentationReleaseMode&&init.method==='POST'&&resource==='financial-model-export'){
+    const options=JSON.parse(String(init.body)),data=await(await localReviewFetch('content',signal)).json() as LocalReview
+    const {portableCashFlowWorkbook}=await import('./cashFlowWorkbook')
+    return new Response(portableCashFlowWorkbook(data.finances,options.input,options.zarPerGbp) as BodyInit,{headers:{'Cache-Control':'no-store','Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}})
+  }
   if(presentationReleaseMode && init.method === 'POST' && ['financial-export','master-pdf'].includes(resource)){
     const options=JSON.parse(String(init.body)),content=await localReviewFetch('content',signal),data=await content.json() as LocalReview
     const {presentationWorkbook,presentationPdf}=await import('./presentationExports')
@@ -61,7 +67,7 @@ export async function localReviewFetch(resource: string, signal?: AbortSignal, i
     const {validExchangeRate}=await import('./financialSchedules')
     if(!['combined','personal','business'].includes(options.scope)||!validExchangeRate(options.zarPerGbp))throw Error('Invalid export assumption')
     const scenario=options.scenario?validSustainable(options.scenario):emptySustainable
-    const bytes=resource==='financial-export'?presentationWorkbook(data.finances,options.scope,options.zarPerGbp,scenario):await presentationPdf(data,options.zarPerGbp,scenario,async id=>new Uint8Array(await (await localReviewFetch('assets/'+id,signal)).arrayBuffer()))
+    const bytes=resource==='financial-export'?presentationWorkbook(data.finances,options.scope,options.zarPerGbp,scenario):await presentationPdf(data,options.zarPerGbp,scenario,async id=>new Uint8Array(await (await localReviewFetch('assets/'+id,signal)).arrayBuffer()),options.cashFlow)
     return new Response(bytes as BodyInit,{headers:{'Cache-Control':'no-store','Content-Type':resource==='financial-export'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf'}})
   }
   const response = await fetch(`${presentationReleaseMode ? '/api/vault/presentation/' : '/api/vault/local-review/'}${resource}`, {

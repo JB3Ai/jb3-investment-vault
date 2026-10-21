@@ -13,6 +13,7 @@ try{
  const {data,records}=await loadLocalReview(root),all=[...records.values()]
  const privateHashes=new Set(all.filter(r=>r.file).map(r=>r.file.sha256))
  const privateText=[...new Set(all.flatMap(r=>[r.id,...(r.kind==='narrative'?String(r.payload.body).split(/\n\s*\n/).filter(s=>s.length>=100):[])]).flatMap(s=>[s,JSON.stringify(s).slice(1,-1)]))]
+ privateText.push(...(data.assets?.ownerEstimates?.briefing.paragraphs??[]).flatMap(s=>[s,JSON.stringify(s).slice(1,-1)]))
  const secrets=[...new Set(Object.entries(process.env).filter(([name,value])=>value&&!/^VITE_/.test(name)&&/(SECRET|TOKEN|PASSWORD|PRIVATE_KEY|SERVICE_ROLE)/i.test(name)).map(([,value])=>value))]
  // Compare the current native Cloudflare credential in memory as well as signatures.
  try{const raw=execFileSync(process.execPath,['node_modules/wrangler/bin/wrangler.js','auth','token','--json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:60000,windowsHide:true});const a=JSON.parse(raw.slice(raw.indexOf('{')));if(a.token)secrets.push(a.token);else if(a.key)secrets.push(a.key)}catch{}

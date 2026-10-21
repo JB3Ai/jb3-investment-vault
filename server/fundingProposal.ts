@@ -25,6 +25,7 @@ export function parseFundingProposal(value: unknown, data: FinancialData): Fundi
     if(personal&&((row.treatment==='included-in-household'&&row.component!=='monthly')||(row.treatment==='additional-one-off'&&row.component!=='one-off')))throw Error('Household component classification mismatch')
     if (!ids.has(row.recordId) || !['one-off','monthly'].includes(row.component) || !['Confirmed','Awaiting reconciliation','Awaiting quote','Deferred'].includes(row.status) || !['Priority','Safety-critical','Medical review required','Essential','Standard','Staged'].includes(row.urgency) || typeof row.note!=='string' || !row.note.trim() || !(personal?['included-in-household','additional-one-off']:['essential-business','conditional-business','optional-hardware']).includes(row.treatment)) throw Error('Funding treatment does not match source schedule')
   }
+  if(p.cashFlowScenarios){const s=p.cashFlowScenarios;if(!s.owner||!/^\d{4}-\d{2}-\d{2}$/.test(s.recordedOn)||!s.source?.relativePath||!/^[a-f0-9]{64}$/.test(s.source.sha256)||!Array.isArray(s.entries)||s.entries.length>10||new Set(s.entries.map(e=>e.recordId)).size!==s.entries.length||s.entries.some(e=>!data.personal.some(r=>r.id===e.recordId&&r.payload.amountMinor===null)||!money(e.amountMinor)||!e.label||!e.note||e.earliestMonth!==null&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(e.earliestMonth)))throw Error('Invalid owner cash-flow scenarios')}
   return p
 }
 export async function loadFundingProposal(root:string,data:FinancialData):Promise<FinancialData>{
@@ -32,5 +33,6 @@ export async function loadFundingProposal(root:string,data:FinancialData):Promis
   try{value=JSON.parse(await readFile(await privateFile(root,'financial-canonical/funding-proposal.json'),'utf8'))}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return data;throw error}
   const p=parseFundingProposal(value,data),hash=(value:Buffer|string)=>createHash('sha256').update(value).digest('hex')
   if(hash(JSON.stringify({personal:data.personal,business:data.business}))!==p.historicalRecordsSha256 || hash(await readFile(await privateFile(root,p.source.relativePath)))!==p.source.sha256)throw Error('Funding proposal source changed; reconciliation required')
+  if(p.cashFlowScenarios){const bytes=await readFile(await privateFile(root,p.cashFlowScenarios.source.relativePath));if(hash(bytes)!==p.cashFlowScenarios.source.sha256)throw Error('Cash-flow scenario source changed');const {source,...copy}=p.cashFlowScenarios;if(JSON.stringify(JSON.parse(bytes.toString('utf8')))!==JSON.stringify(copy))throw Error('Cash-flow scenario copy differs from source')}
   return {...data,funding:p}
 }

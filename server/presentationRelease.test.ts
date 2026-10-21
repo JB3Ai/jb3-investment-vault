@@ -1,3 +1,4 @@
+import {emptyCashFlow} from '../src/lib/cashFlow'
 import {it,expect} from 'vitest'
 import {presentationRelease} from './presentationRelease'
 import {presentationWorkbook,presentationPdf} from './presentationExports'
@@ -35,3 +36,11 @@ it('publishes catalogue notices without granting access even if a held asset is 
  expect(content.status).toBe(200);expect((await content.json()).documentNotices).toHaveLength(1)
  for(const method of ['GET','HEAD']){const denied=await presentationRelease(new Request('https://example.test/api/vault/presentation/assets/'+id,{method}),held);expect(denied.status).toBe(404);expect(denied.headers.get('cache-control')).toContain('no-store')}
 })
+
+it('rejects loopback-only PDF records and covers from the public presentation',async()=>{
+ const id='00000000-0000-4000-8000-000000000088',review={recordId:id,metadata:{'publication.scope':'loopback-owner-review-only'}}
+ const localOnly={...env as object,VAULT_PRESENTATION:{get:async()=>JSON.stringify({data:{...data,evidenceReviews:[review]},assets:{[id]:{key:'presentation-synthetic/assets/'+id,mime:'application/pdf'}}})}} as never
+ for(const resource of ['content','assets/'+id])for(const method of ['GET','HEAD']){const response=await presentationRelease(new Request('https://example.test/api/vault/presentation/'+resource,{method}),localOnly);expect(response.status).toBe(503);expect(response.headers.get('cache-control')).toContain('no-store')}
+})
+
+it('exports only a validated cash-flow assumption set against the approved projection',async()=>{const request=(body:unknown,headers:Record<string,string>={})=>new Request('https://example.test/api/vault/presentation/financial-model-export',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});const response=await presentationRelease(request({zarPerGbp:25,input:{...emptyCashFlow(),zeroIncome:true,openingCash:0}}),env);expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toContain('no-store');const files=unzipSync(new Uint8Array(await response.arrayBuffer()));expect(strFromU8(files['xl/workbook.xml'])).toContain('Cash Flow');expect((await presentationRelease(request({zarPerGbp:25,input:emptyCashFlow(),records:[]}),env)).status).toBe(400);expect((await presentationRelease(request({zarPerGbp:25,input:emptyCashFlow()},{Origin:'https://other.test'}),env)).status).toBe(403);expect((await presentationRelease(request({zarPerGbp:25,input:emptyCashFlow()}),{})).status).toBe(503)})

@@ -1,3 +1,4 @@
+import {cashFlowExportRequest,createCashFlowWorkbook} from './cashFlowExport.ts'
 import {PresentationPin,readPresentationPin} from './presentationPin.ts'
 import { loadFundingProposal } from './fundingProposal.ts'
 import { loadCommercialReview } from './commercialReview.ts'
@@ -66,6 +67,7 @@ export async function loadLocalReview(root: string) {
   } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   const data: LocalReview = {
     sections,
+    sectionVisuals: manifest.sections.filter(section=>section.id!=='history-evidence').flatMap(section=>section.records.filter(record=>record.kind==='photograph'&&!thumbnailReference(record.provenance.sourceReference)).map(record=>({sectionId:section.id,record}))),
     laboratory: {
       title: intake.laboratoryShowcase?.title ?? '23-Day Laboratory Showcase',
       records: select(intake.laboratoryShowcase?.recordIds ?? []),
@@ -121,6 +123,12 @@ export function privateLocalReview(root: string): Plugin {
           if(result.retryAfter)response.setHeader('Retry-After',String(result.retryAfter))
           response.setHeader('Content-Type','application/json');response.end(JSON.stringify({ok:result.status===200}));return
         }
+        if(request.url==='/api/vault/local-review/financial-model-export'){
+          if(request.method!=='POST'||request.headers['content-type']!=='application/json')return deny(405)
+          if(exporting)return deny(429)
+          exporting=true
+          try{const chunks:Buffer[]=[];let size=0;for await(const chunk of request){size+=Buffer.byteLength(chunk);if(size>16384)return deny(413);chunks.push(Buffer.from(chunk))}const options=cashFlowExportRequest(JSON.parse(Buffer.concat(chunks).toString('utf8'))),current=await loadLocalReview(root);const bytes=await createCashFlowWorkbook(current.data.finances,options.input,options.zarPerGbp);response.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');response.setHeader('Content-Disposition','attachment; filename="JB3-financial-model.xlsx"');response.end(bytes)}catch{deny(400)}finally{exporting=false}return
+        }
         if (['/api/vault/local-review/financial-export','/api/vault/local-review/master-pdf'].includes(request.url??'')) {
           if (request.method !== 'POST') return deny(405)
           if (exporting) return deny(429)
@@ -134,7 +142,7 @@ export function privateLocalReview(root: string): Plugin {
             if (JSON.stringify(current.data.finances) !== JSON.stringify(loaded.data.finances) || JSON.stringify(current.data.assets) !== JSON.stringify(loaded.data.assets) || request.url === '/api/vault/local-review/master-pdf' && (JSON.stringify(current.data.commercial) !== JSON.stringify(loaded.data.commercial) || JSON.stringify(current.data.evidenceReviews) !== JSON.stringify(loaded.data.evidenceReviews))) return deny(409)
             if(request.url==='/api/vault/local-review/master-pdf'){
               if(options.scope!=='combined')return deny(400)
-              const bytes=await generateMasterPdf(current.root,current.data,options.zarPerGbp,options.scenario)
+              const bytes=await generateMasterPdf(current.root,current.data,options.zarPerGbp,options.scenario,options.cashFlow)
               response.setHeader('Content-Type','application/pdf');response.setHeader('Content-Disposition','attachment; filename="JB3-private-master.pdf"');response.setHeader('Content-Length',bytes.length);response.end(bytes);return
             }
             const bytes = await createFinancialWorkbook(current.data.finances, options.scope, options.zarPerGbp, options.scenario)

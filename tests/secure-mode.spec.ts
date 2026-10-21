@@ -12,7 +12,7 @@ test('presentation opens without Auth but all confidential features remain close
  await expect(page.getByText('Demonstration edition')).toHaveCount(0)
  for (const title of ['Introduction','Current Position','History & Evidence','Assets & Claims','Financial Requirements','Beobacht Alignment','Commercial Pipeline','Southern African Strategy','Financial Forecast','Investment Structures','Closing']) {
   await page.getByRole('button', { name: 'Open ' + title, exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('access pending.')
+  await expect(page.getByRole('status').filter({hasText:'access pending.'})).toContainText('access pending.')
   await expect(page.getByLabel('Starting monthly revenue')).toHaveCount(0)
   await page.getByRole('button', { name: 'Back to Console', exact: true }).click()
  }

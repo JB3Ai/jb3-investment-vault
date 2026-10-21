@@ -1,3 +1,4 @@
+import {investorNarrative} from './narrativePresentation.ts'
 /** Presentation only. Never use this projection for ingestion, hashing or authorisation. */
 const atom = /(?:https?:\/\/[^\s<>]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|\bJB3_[A-Z0-9_]+\b|\bJB(?:3| 3|³)(?:Ai)?[\w³.-]*\.(?:pdf|xlsx?|xlsm|png|jpe?g|md|json)\b|\b[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b|\x60[^\x60]+\x60|"[^"\n]+"|“[^”\n]+”|^\s*>[^\n]*|^\s*\x60\x60\x60[\s\S]*?^\s*\x60\x60\x60)/gm
 const brand = /JB(?: 3|3|³)(?:Ai|AI|ai)?(?![\p{L}\p{N}_])/gu
@@ -29,7 +30,7 @@ const verbatimKeys = new Set(['provenance','file','metadata','source','sourceRef
 export function presentationView<T>(input:T):T {
   function project(value:unknown,key=''):unknown {
     if(verbatimKeys.has(key))return value
-    if(typeof value==='string')return displayKeys.has(key)?presentationText(value):value
+    if(typeof value==='string')return displayKeys.has(key)?presentationText(key==='body'?investorNarrative(value):value):value
     if(Array.isArray(value))return value.map(item=>project(item,key))
     if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([name,item])=>[name,project(item,name)]))
     return value

@@ -1,0 +1,7 @@
+/* Only explicit file controls participate; disabled permissions remain visually inert. */
+.file-action{transition:box-shadow .16s ease,border-color .16s ease,filter .16s ease}
+@media(hover:hover){.file-action:not(:disabled):not([aria-disabled=true]):hover{border-color:var(--champagne,#d5b98b);box-shadow:inset 0 1px #fff2,0 0 0 1px #d5b98b66,0 0 16px #dba45455;filter:brightness(1.1)}}
+.file-action:not(:disabled):not([aria-disabled=true]):is(:focus-visible,:active){border-color:var(--champagne,#d5b98b);box-shadow:inset 0 1px #fff2,0 0 0 1px #d5b98b66,0 0 16px #dba45455;filter:brightness(1.1)}
+.file-action:focus-visible{outline:2px solid var(--amber,#dba454);outline-offset:3px}
+.financial-workspace .file-action:not(:disabled):not([aria-disabled=true]):is(:hover,:focus-visible,:active){border-color:#92743e;box-shadow:inset 0 1px #fff8,0 0 0 1px #92743e55,0 0 14px #92743e55;filter:brightness(1.04)}
+@media(prefers-reduced-motion:reduce){.file-action{transition:none!important}}

@@ -1,0 +1,7 @@
+import {lazy,Suspense,useEffect,useRef} from 'react'
+const Viewer=lazy(()=>import('./SecureDocumentViewer'))
+export function ContextualPdfDialog({data,title,onClose,returnFocus}:{data:Uint8Array;title:string;onClose:()=>void;returnFocus:HTMLElement|null}){
+ const host=useRef<HTMLDivElement>(null)
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow='hidden';host.current?.focus();return()=>{document.body.style.overflow=overflow;(returnFocus?.isConnected?returnFocus:previous)?.focus()}},[])
+ return <div className="context-pdf-overlay" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={host} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();onClose()}if(event.key==='Tab'){const controls=host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,[tabindex="0"]');if(!controls?.length){event.preventDefault();return}const first=controls[0],last=controls[controls.length-1];if(event.shiftKey&&(document.activeElement===first||document.activeElement===host.current)){event.preventDefault();last.focus()}else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===host.current)){event.preventDefault();first.focus()}}}}><div className="context-pdf-window"><Suspense fallback={<p role="status">Opening private PDF...</p>}><Viewer source={data} title={title} onClose={onClose} accessLabel="PRIVATE SOURCE / EXISTING DOCUMENT PERMISSIONS"/></Suspense></div></div>
+}

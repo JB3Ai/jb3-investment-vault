@@ -1,0 +1,4 @@
+import {it,expect} from 'vitest'
+import {assertPrivateFileLimits} from '../../content-migration/local-importer'
+it('retains the 25 MiB individual-file limit in review and export workflows',()=>{for(const review of [false,true]){expect(()=>assertPrivateFileLimits(25*1024*1024,25*1024*1024,review)).not.toThrow();expect(()=>assertPrivateFileLimits(25*1024*1024+1,25*1024*1024+1,review)).toThrow();expect(()=>assertPrivateFileLimits(0,0,review)).toThrow()}})
+it('retains the 100 MiB export limit while bounding review-only catalogues at 256 MiB',()=>{expect(()=>assertPrivateFileLimits(1024,100*1024*1024)).not.toThrow();expect(()=>assertPrivateFileLimits(1024,100*1024*1024+1)).toThrow();expect(()=>assertPrivateFileLimits(1024,110*1024*1024,true)).not.toThrow();expect(()=>assertPrivateFileLimits(1024,256*1024*1024+1,true)).toThrow()})

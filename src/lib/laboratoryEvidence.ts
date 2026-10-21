@@ -19,3 +19,13 @@ export function youtubeId(url: string): string | null {
     return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null
   } catch { return null }
 }
+
+/** Browsing order is explicit review order, never an assignment to unresolved positions. */
+export function laboratoryFrames<T extends {id:string}>(images:T[],review?:LaboratoryEvidenceReview|null):{image:T;position:number|null;originalNumber:number|null}[]{
+ if(!review)return images.map(image=>({image,position:null,originalNumber:null}))
+ const seen=new Set<string>(),frames:{image:T;position:number|null;originalNumber:number|null}[]=[]
+ const append=(recordId:string,position:number|null,originalNumber:number|null)=>{const image=images.find(item=>item.id===recordId);if(image&&!seen.has(recordId)){seen.add(recordId);frames.push({image,position,originalNumber})}}
+ for(const slot of review.slots)if(slot.recordId)append(slot.recordId,slot.position,slot.originalNumber)
+ for(const item of review.unplaced)append(item.recordId,null,item.originalNumber)
+ return frames
+}
