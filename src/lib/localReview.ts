@@ -20,7 +20,20 @@ export interface EvidenceReview {
 }
 
 /** Transport types only. Populated records are fetched from the local Node process. */
+/** Safe catalogue notices only; these never grant file access or carry extracted source text. */
+export interface DocumentNotice {
+  recordId: string | null
+  title: string
+  association: string
+  filename: string | null
+  classification: 'LEGAL_RESTRICTED' | 'BRUCE_PRIVATE'
+  sectionIds: string[]
+  collection: 'legal' | 'client-engagements'
+  status: string
+  reason: string
+}
 export interface LocalReview {
+  documentNotices?: DocumentNotice[]
   sections: { id: string; narrative: ApprovedNarrative }[]
   laboratory: { title: string; records: ContentRecord[]; photographs: ContentRecord[]; review?: LaboratoryEvidenceReview | null }
   documents: ContentRecord[]

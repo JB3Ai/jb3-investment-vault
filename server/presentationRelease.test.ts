@@ -26,3 +26,12 @@ it('exports consistent selected-rate formulas without converting unknown draft a
  expect(assumptions).toContain('<v>20</v>');expect(personal).toContain('<v>25</v>');expect(personal).toContain('Assumptions!$B$2');expect(personal).toContain('draft')
  const pdf=await presentationPdf(data,20,emptySustainable);expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThan(0)
 })
+
+it('publishes catalogue notices without granting access even if a held asset is accidentally indexed',async()=>{
+ const id='00000000-0000-4000-8000-000000000077'
+ const notice={recordId:id,title:'Synthetic legal evidence',association:'Synthetic matter',filename:'synthetic.pdf',classification:'LEGAL_RESTRICTED',sectionIds:['assets-claims'],collection:'legal',status:'Draft / unpublished',reason:'Publication approval absent'}
+ const held={...env as object,VAULT_PRESENTATION:{get:async()=>JSON.stringify({data:{...data,documentNotices:[notice]},assets:{[id]:{key:'presentation-synthetic/assets/'+id,mime:'application/pdf'}}})}} as never
+ const content=await presentationRelease(new Request('https://example.test/api/vault/presentation/content'),held)
+ expect(content.status).toBe(200);expect((await content.json()).documentNotices).toHaveLength(1)
+ for(const method of ['GET','HEAD']){const denied=await presentationRelease(new Request('https://example.test/api/vault/presentation/assets/'+id,{method}),held);expect(denied.status).toBe(404);expect(denied.headers.get('cache-control')).toContain('no-store')}
+})

@@ -29,6 +29,7 @@ export async function presentationRelease(request:Request, env:PresentationEnv):
   }
   if(path.startsWith('assets/')){
    if(!['GET','HEAD'].includes(request.method))return reply(null,405)
+   if(release.data.documentNotices?.some(notice=>notice.recordId===path.slice(7)))return reply(null,404)
    const asset=release.assets[path.slice(7)]
    if(!asset || !asset.key.startsWith(env.VAULT_PRESENTATION_RELEASE+'/assets/'))return reply(null,404)
    if(request.headers.has('Range'))return reply(null,416)
