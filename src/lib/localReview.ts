@@ -28,7 +28,8 @@ export interface DocumentNotice {
   filename: string | null
   classification: 'LEGAL_RESTRICTED' | 'BRUCE_PRIVATE'
   sectionIds: string[]
-  collection: 'legal' | 'client-engagements'
+  collection: 'legal' | 'client-engagements' | 'evidence'
+  category?: string
   status: string
   reason: string
 }
@@ -40,7 +41,7 @@ export interface LocalReview {
   documents: ContentRecord[]
   evidenceReviews?: EvidenceReview[]
   localDocumentPreviewIds?: string[]
-  thumbnailPreviews?: {recordId:string;parentId:string;sha256:string;originalFilename:string;classification:string;approval:string;available:boolean}[]
+  thumbnailPreviews?: {recordId:string;parentId:string;sha256:string;originalFilename:string;classification:string;approval:string;available:boolean;previewKind?:'neutral'|'source-cover';parentSha256?:string;originalAvailable?:boolean}[]
   commercial?: CommercialReview
   assets?: AssetReview
   finances: {

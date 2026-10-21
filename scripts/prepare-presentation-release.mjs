@@ -1,4 +1,4 @@
-import {presentationVisuals,privateSourcePath} from '../server/presentationScreening.ts'
+import {presentationVisuals,privateSourcePath,approvedPresentationCover} from '../server/presentationScreening.ts'
 // Deployment projection of the established intake. Originals and approvals are never mutated.
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -61,10 +61,12 @@ for(const spec of [
  {title:"Children's Custody",filename:'URGENT_APPLICATION_2025.07.28.11.45.pdf',section:'current-position'},
  {title:'Blackburn House',filename:'Master_Litigation_Dossier_Blackburn.pdf',section:'assets-claims'},
 ]){const record=spec.filename?original.documents.find(r=>r.provenance.originalFilename===spec.filename):null;documentNotices.push({recordId:record?.id??null,title:spec.title,association:spec.title,filename:record?.provenance.originalFilename??null,classification:'LEGAL_RESTRICTED',sectionIds:[spec.section],collection:'legal',status:record?'Draft / unpublished':'Source missing',reason:record?'Sensitive legal and third-party material. Explicit publication review and appropriate authorisation are required before original bytes can be served.':'No separate canonical Micore PDF was found in the existing intake. The Blackburn house dossier is a different matter and has not been substituted.'})}
+for(const spec of [{filename:'Jonathan_Blackburn_Premium_Resume.pdf',title:'Jonathan Blackburn | Professional Résumé',category:'Founder Profile & Credentials',section:'history-evidence'},{filename:'phase2_assets_and_githubauditV2.pdf',title:'JB³ Assets & GitHub Audit',category:'Technical Assets',section:'assets-claims'}]){const record=original.documents.find(r=>r.provenance.originalFilename===spec.filename);if(record)documentNotices.push({recordId:record.id,title:spec.title,association:spec.title,filename:spec.filename,classification:'BRUCE_PRIVATE',sectionIds:[spec.section],collection:'evidence',category:spec.category,status:'Draft / unpublished',reason:'Safe catalogue cover only. The original PDF remains in private owner review; publication and download access have not been granted.'})}
 const allowed=new Set(original.localDocumentPreviewIds??[]),documents=[]
 for(const record of original.documents){
  let reason=null
- if(original.evidenceReviews?.find(review=>review.recordId===record.id)?.metadata['publication.scope']==='loopback-owner-review-only')reason='Local owner review only; no public publication approval'
+ if(publicationApprovals[record.file?.sha256]?.scope==='withhold-original')reason='Restricted source marking identified during cover review; original withheld'
+ else if(original.evidenceReviews?.find(review=>review.recordId===record.id)?.metadata['publication.scope']==='loopback-owner-review-only')reason='Local owner review only; no public publication approval'
  else if(record.classification==='LEGAL_RESTRICTED')reason='Restricted legal dossier'
  else if(/Cyber-Noir Music Console Magazine/i.test(record.provenance.originalFilename))reason='Identifiable family name on cover; publication held for review'
  else if(!allowed.has(record.id))reason='No existing document viewing approval'
@@ -72,12 +74,14 @@ for(const record of original.documents){
  else{const {file}=await bytesFor(record);const run=spawnSync('python',['-c',python,file],{encoding:'utf8',windowsHide:true,input:JSON.stringify([...childTokens]),stdio:['pipe','pipe','pipe']});if(run.status!==0)throw Error('PDF screening unavailable');const scan=JSON.parse(run.stdout);if(scan.confidential)reason='Confidential marking; separate publication approval required';else if(scan.sensitiveNames)reason='Child-identifying name match; original withheld'
  else if(scan.childNameContext)reason='Possible child-identifying text; original withheld'
  else if(scan.legalOrChild)reason='Legal or personal-identification content';else if(scan.credential)reason='Credential-like content requires review'}
- if(reason){excluded.push({filename:record.provenance.originalFilename,reason});const spec=clientSpecs.find(spec=>spec.match(record.provenance.originalFilename));if(spec)documentNotices.push({recordId:record.id,title:spec.title,association:spec.association,filename:record.provenance.originalFilename,classification:'BRUCE_PRIVATE',sectionIds:['commercial-pipeline'],collection:'client-engagements',status:spec.label??spec.status,reason:reason==='Confidential marking; separate publication approval required'?'The source is marked confidential. Original bytes remain unpublished pending explicit publication approval.':'Sensitive personal, safety or legal source material requires a separate publication review. Original bytes remain unpublished.'});continue}
+ if(reason){excluded.push({filename:record.provenance.originalFilename,reason});const spec=clientSpecs.find(spec=>spec.match(record.provenance.originalFilename));if(spec)documentNotices.push({recordId:record.id,title:spec.title,association:spec.association,filename:record.provenance.originalFilename,classification:'BRUCE_PRIVATE',sectionIds:['commercial-pipeline'],collection:'client-engagements',status:spec.label??spec.status,reason:reason.startsWith('Restricted source marking')?'The source cover is marked restricted. Original bytes remain unpublished pending explicit publication approval.':reason==='Confidential marking; separate publication approval required'?'The source is marked confidential. Original bytes remain unpublished pending explicit publication approval.':'Sensitive personal, safety or legal source material requires a separate publication review. Original bytes remain unpublished.'});continue}
  documents.push(record);await add(record,'application/pdf')
 }
 data.documentNotices=documentNotices;data.documents=documents;const visible=new Set(documents.map(r=>r.id));data.localDocumentPreviewIds=[...visible]
 data.evidenceReviews=(data.evidenceReviews??[]).filter(r=>visible.has(r.recordId))
-data.thumbnailPreviews=(data.thumbnailPreviews??[]).filter(r=>visible.has(r.parentId)&&r.classification!=='LEGAL_RESTRICTED')
+const existingCovers=(data.thumbnailPreviews??[]).filter(r=>visible.has(r.parentId)&&r.classification!=='LEGAL_RESTRICTED')
+const coverParents=[...new Set([...visible,...documentNotices.map(n=>n.recordId).filter(Boolean)])]
+data.thumbnailPreviews=coverParents.flatMap(parentId=>{const parent=records.get(parentId);if(!parent)return [];const record=[...records.values()].find(record=>approvedPresentationCover(record,parent,publicationApprovals[record.file?.sha256],visible.has(parentId)));if(record){const approval=publicationApprovals[record.file.sha256];return [{recordId:record.id,parentId,sha256:record.file.sha256,originalFilename:record.provenance.originalFilename,classification:record.classification,approval:record.approval,available:true,previewKind:approval.previewKind,parentSha256:parent.file.sha256,originalAvailable:visible.has(parentId)}]}return existingCovers.filter(r=>r.parentId===parentId)})
 for(const thumbnail of data.thumbnailPreviews){const record=records.get(thumbnail.recordId);if(record)await add(record,'image/png')}
 // Only the established laboratory mapping, never unrelated evidence imagery.
 for(const photo of data.laboratory.photographs)await add(photo,photo.file.mimeType??'image/jpeg')
